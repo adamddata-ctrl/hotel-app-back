@@ -2,24 +2,21 @@ package com.hotelpos.demo.features.auth;
 
 import com.hotelpos.demo.shared.BaseEntity;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
-/**
- * Shared Multi-Tenant User Entity Account. Extends BaseEntity to automatically
- * inherit the required tenant_id partitioning constraint columns.
- */
-@Entity
-@Table(
-        name = "users",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "username"})
-)
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(
+        name = "users",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "username"}),
+        indexes = {
+                // 🔥 ADDED: Speeds up your multi-tenant 4-digit PIN touchscreen login query lookups! [3.1]
+                @Index(name = "idx_tenant_pin_auth", columnList = "tenant_id, pin_code")
+        }
+)
 public class User extends BaseEntity {
 
     @Id
@@ -30,21 +27,21 @@ public class User extends BaseEntity {
     private String username; // Access name or handle unique within individual tenant spaces
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 15)
+    @Column(name = "role", nullable = false, columnDefinition = "ENUM('OWNER', 'CASHIER')")
     private Role role; // Access boundaries: OWNER or CASHIER
 
     @Column(name = "pin_code", length = 4)
     private String pinCode; // High-speed 4-digit PIN token used exclusively by Cashiers
 
     @Column(length = 255)
-    private String password; // Securely hashed bCrypt password configuration used by Owners
+    private String password; // Securely hashed password credential token used by Owners
 
-    @Column(name = "display_name", nullable = false, length = 100)
-    private String displayName; // The descriptive readable name of the individual user
+    /** Helper shortcut method to return a user profile display name text string layout */
+    public String getDisplayName() {
+        return this.username != null ? this.username.toUpperCase() : "UNKNOWN CASHIER";
+    }
 
-    /**
-     * Enumerator tracking system-wide role authorization tiers.
-     */
+    /** System identity security access roles matrix boundaries schema definitions. */
     public enum Role {
         OWNER,
         CASHIER

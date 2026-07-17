@@ -11,15 +11,9 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
 
-/**
- * Resolves a user by their username within a specific restaurant workspace.
- * Used principally for Tenant Owner secure sign-in operations.
- */
+
 Optional<User> findByTenantIdAndUsername(String tenantId, String username);
 
-    /**
-     * Resolves a cashier account using their high-speed 4-digit security PIN
-     * within a specific restaurant workspace boundary.
-     */
+
     Optional<User> findByTenantIdAndPinCode(String tenantId, String pinCode);
 }

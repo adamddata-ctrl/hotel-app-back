@@ -1,14 +1,16 @@
 package com.hotelpos.demo.features.analytics;
 
+import com.hotelpos.demo.features.menu.MenuItem;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import java.math.BigDecimal;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class ItemSalesVolumeReport {
     private String itemName;
-    private String category;
-    private Long totalQuantitySold;
-    private BigDecimal totalRevenueGenerated;
+    private MenuItem.Category category; // Matches your enum type layout
+    private Long totalQuantitySold;      // 🔥 Fixed: Changed to Long to match JPQL SUM()
+    private Long totalRevenueGenerated;  // 🔥 Fixed: Changed to Long to match JPQL SUM()
 }
