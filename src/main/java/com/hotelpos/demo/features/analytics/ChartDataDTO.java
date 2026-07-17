@@ -1,12 +1,14 @@
 package com.hotelpos.demo.features.analytics;
 
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.Data;
 
 @Data
+@NoArgsConstructor  // 👇 ADDED: Required by Hibernate to instantiate the object
 @AllArgsConstructor
 public class ChartDataDTO {
-    private String timeLabel;  // Holds Month name ("December") or Specific Day Date ("Dec 12")
-    private int monthNum;      // Numeric month helper identifier (e.g., 12 for December)
-    private double salesTotal; // Gross sales volume amount calculated for that period
+    private String timeLabel;
+    private int monthNum;
+    private Double salesTotal; // 👇 CHANGED: Primitive double changed to Double object wrapper
 }

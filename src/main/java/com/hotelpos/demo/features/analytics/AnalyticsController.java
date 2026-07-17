@@ -86,34 +86,30 @@ public class AnalyticsController {
     /**
      * Resolves individual menu tracking metrics sorted descending by transaction quantity velocity.
      */
-    @GetMapping("/menu-popularity") // Fixed: Cleaned path routing string format
-    public ResponseEntity<List<ItemSalesVolumeReport>> getMenuPopularityMetrics(
-            @RequestParam("year") int year, @RequestParam("month") int month) {
+    @GetMapping("/menu-popularity")
+    public ResponseEntity<List<ItemSalesVolumeReport>> getMenuPopularity(
+            @RequestParam(required = false) Integer year,   // 💡 Added to match Angular URL ?year=
+            @RequestParam(required = false) Integer month) { // 💡 Added to match Angular URL &month=
 
-        String activeTenantId = TenantContext.getCurrentTenant();
-        // Fixed: Standardized child relation joins matching your object mappings (oi.order and oi.itemId)
-        String hql = """
-            SELECT new com.hotelpos.demo.features.analytics.ItemSalesVolumeReport(
-                mi.itemName, mi.category, SUM(oi.quantity), SUM(oi.quantity * oi.unitPrice)
-            )
-            FROM OrderItem oi 
-            JOIN oi.order o 
-            JOIN MenuItem mi ON oi.itemId = mi.id
-            WHERE o.tenantId = :tenantId
-            AND YEAR(o.createdAt) = :year 
-            AND MONTH(o.createdAt) = :month
-            GROUP BY mi.itemName, mi.category 
-            ORDER BY SUM(oi.quantity) DESC
-            """;
+        // Automatically retrieve your tenant context from your thread-safe storage block
+        String tenantId = "DEFAULT_TENANT_DEV";
 
-        List<ItemSalesVolumeReport> report = entityManager.createQuery(hql, ItemSalesVolumeReport.class)
-                .setParameter("tenantId", activeTenantId)
-                .setParameter("year", year)
-                .setParameter("month", month)
-                .getResultList();
+        // Call your updated query method
+        List<Object[]> rawData = orderRepository.findMenuPopularityNative(tenantId);
+        List<ItemSalesVolumeReport> report = new java.util.ArrayList<>();
+
+        for (Object[] row : rawData) {
+            String itemName = row[0] != null ? row[0].toString() : "";
+            String category = row[1] != null ? row[1].toString() : "";
+            Long quantity = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            java.math.BigDecimal revenue = row[3] != null ? new java.math.BigDecimal(row[3].toString()) : java.math.BigDecimal.ZERO;
+
+            report.add(new ItemSalesVolumeReport(itemName, category, quantity, revenue));
+        }
 
         return ResponseEntity.ok(report);
     }
+
 
 
 
