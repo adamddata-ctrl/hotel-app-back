@@ -13,81 +13,85 @@ import java.util.List;
 
 @Configuration
 public class DatabaseSeederConfig {
-    /**
-     * Executes automatically upon application startup to pre-seed the database
-     * with isolated, tenant-specific menu items and staff structures [3.1].
-     */
+
     @Bean
+
     public CommandLineRunner seedDatabase(MenuItemRepository menuItemRepository, UserRepository userRepository) {
         return args -> {
-            String testTenant = "DEFAULT_TENANT_DEV";
 
-            // ==========================================================================
-            // 🍔 1. MENU CONFIGURATIONS INITIALIZATION SEEDER
-            // ==========================================================================
-            if (menuItemRepository.findByTenantId(testTenant).isEmpty()) {
-                System.out.println("🌱 SEED ENGINE: Pre-populating empty multi-tenant register menus...");
+            // =========================================================================
+            // 1. ISOLATED MULTI-TENANT MENU CATALOG INITIALIZATION SEEDER
+            // =========================================================================
+
+            // --- HOTEL WORKSPACE ALPHA (Tenant ID: alpha-resort) ---
+            String tenantAlpha = "alpha-resort";
+            if (menuItemRepository.findByTenantId(tenantAlpha).isEmpty()) {
+                System.out.println("🌱 SEED ENGINE: Pre-populating empty menu records for Tenant: " + tenantAlpha);
 
                 MenuItem chicken = new MenuItem();
-                chicken.setTenantId(testTenant);
+                chicken.setTenantId(tenantAlpha);
                 chicken.setItemName("Crispy Fried Chicken");
                 chicken.setCategory(MenuItem.Category.FOOD);
                 chicken.setPrice(new BigDecimal("12.50"));
-
                 MenuItem burger = new MenuItem();
-                burger.setTenantId(testTenant);
+                burger.setTenantId(tenantAlpha);
                 burger.setItemName("Gourmet Beef Burger");
                 burger.setCategory(MenuItem.Category.FOOD);
                 burger.setPrice(new BigDecimal("14.00"));
 
+                menuItemRepository.saveAll(List.of(chicken, burger));
+            }
+
+            // --- HOTEL WORKSPACE BETA (Tenant ID: beta-luxury) ---
+            String tenantBeta = "beta-luxury";
+            if (menuItemRepository.findByTenantId(tenantBeta).isEmpty()) {
+                System.out.println("🌱 SEED ENGINE: Pre-populating empty menu records for Tenant: " + tenantBeta);
+
+                MenuItem steak = new MenuItem();
+                steak.setTenantId(tenantBeta);
+                steak.setItemName("Premium Ribeye Steak");
+                steak.setCategory(MenuItem.Category.FOOD);
+                steak.setPrice(new BigDecimal("28.00"));
+
                 MenuItem soda = new MenuItem();
-                soda.setTenantId(testTenant);
+                soda.setTenantId(tenantBeta);
                 soda.setItemName("Classic Soft Drink");
                 soda.setCategory(MenuItem.Category.DRINK);
                 soda.setPrice(new BigDecimal("2.50"));
 
-                MenuItem coffee = new MenuItem();
-                coffee.setTenantId(testTenant);
-                coffee.setItemName("Espresso Macchiato");
-                coffee.setCategory(MenuItem.Category.DRINK);
-                coffee.setPrice(new BigDecimal("3.50"));
-
-                menuItemRepository.saveAll(List.of(chicken, burger, soda, coffee));
-                System.out.println("✅ SEED ENGINE: Baseline core menus successfully registered.");
-            } else {
-                System.out.println("⏭️ SEED ENGINE: Restaurant menu catalog records verified. Seeding skipped.");
+                menuItemRepository.saveAll(List.of(steak, soda));
             }
 
-            // ==========================================================================
-            // 🤵 2. FLOOR STAFF INITIALIZATION SEEDER
-            // ==========================================================================
-            // Safely verify if these specific default user profiles are missing for our dev tenant
-            if (userRepository.findByTenantIdAndPinCode(testTenant, "1111").isEmpty() &&
-                    userRepository.findByTenantIdAndPinCode(testTenant, "2222").isEmpty()) {
+            // =========================================================================
+            // 2. MULTI-TENANT AUTHENTICATION PROFILE INITIALIZATION SEEDER
+            // =========================================================================
 
-                System.out.println("🌱 SEED ENGINE: Instantiating automated multi-tenant waiter profiles...");
+            // FIXED: Switched loop to an OR (||) check to guarantee persistent profile stability
+            if (userRepository.findByTenantIdAndPinCode(tenantAlpha, "1111").isEmpty() ||  userRepository.findByTenantIdAndPinCode(tenantAlpha, "2222").isEmpty()) {
 
-                // Staff Waiter #1 Profile Definition
+                System.out.println("🌱 SEED ENGINE: Instantiating multi-tenant waiter and owner rosters...");
+
+                // Staff Profile #1: Front Counter Cashier User
                 User waiterOne = new User();
-                waiterOne.setId(java.util.UUID.randomUUID().toString()); // Assign required unique String ID
-                waiterOne.setTenantId(testTenant);
-                waiterOne.setUsername("Samuel Kebede"); // 🔥 Removed setDisplayName line
-                waiterOne.setPinCode("1111"); // High-speed 4-digit PIN selection code
-                waiterOne.setRole(User.Role.CASHIER); // Set to CASHIER/STAFF tier
+                waiterOne.setId(java.util.UUID.randomUUID().toString());
+                waiterOne.setTenantId(tenantAlpha);
+                waiterOne.setUsername("Samuel Kebede");
+                waiterOne.setPinCode("1111");
+                waiterOne.setRole(User.Role.CASHIER); // Correctly locked to frontline sales terminal operations
 
-                // Staff Waiter #2 Profile Definition
+                // Staff Profile #2: Higher Level Manager User
                 User waiterTwo = new User();
-                waiterTwo.setId(java.util.UUID.randomUUID().toString()); // Assign required unique String ID
-                waiterTwo.setTenantId(testTenant);
-                waiterTwo.setUsername("Helen Alemu"); // 🔥 Removed setDisplayName line
+                waiterTwo.setId(java.util.UUID.randomUUID().toString());
+                waiterTwo.setTenantId(tenantAlpha);
+                waiterTwo.setUsername("Helen Alemu");
                 waiterTwo.setPinCode("2222");
-                waiterTwo.setRole(User.Role.CASHIER);
-                // Commit both staff records to MySQL at once
+                waiterTwo.setRole(User.Role.OWNER); // FIXED: Elevated role mapping to securely load your dashboard charts
+
                 userRepository.saveAll(List.of(waiterOne, waiterTwo));
-                System.out.println("✅ SEED ENGINE: Baseline waiter rosters successfully synchronized.");
+                System.out.println("🎯 SEED ENGINE: Baseline user rosters successfully synchronized.");
             } else {
-                System.out.println("⏭️ SEED ENGINE: Staff user profiles verified. User seeding skipped.");
+                System.out.println("📊 SEED ENGINE: Staff user profiles verified. Seeding skipped.");
             }
-            };
+        };
     }
 }
