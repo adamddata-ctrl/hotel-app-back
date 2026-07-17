@@ -30,8 +30,9 @@ public class User extends BaseEntity {
     @Column(name = "role", nullable = false, columnDefinition = "ENUM('OWNER', 'CASHIER')")
     private Role role; // Access boundaries: OWNER or CASHIER
 
-    @Column(name = "pin_code", length = 4)
-    private String pinCode; // High-speed 4-digit PIN token used exclusively by Cashiers
+    // FIXED: Increased length from 4 to 60 to fully accommodate secure BCrypt hashes!
+    @Column(name = "pin_code", length = 60)
+    private String pinCode;
 
     @Column(length = 255)
     private String password; // Securely hashed password credential token used by Owners

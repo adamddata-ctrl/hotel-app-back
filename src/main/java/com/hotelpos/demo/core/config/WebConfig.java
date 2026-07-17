@@ -18,7 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
         // Enforce the tenant firewall across EVERY endpoint by default
         registry.addInterceptor(tenantInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/auth/**", "/static/**", "/index.html", "/error"); // Explicitly allow public endpoints
+                // 🎯 BULLETPROOF BYPASS: Include the correct "/api" prefix so it accurately matches your AuthController!
+                .excludePathPatterns("/api/auth/**", "/static/**", "/index.html", "/error");
     }
 
     @Override

@@ -16,27 +16,32 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                // 1. Activate custom cross-origin configuration mappings
+        return http
+                // 1. Explicitly hook your customized cross-origin settings
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // 2. Disable CSRF to allow seamless multi-tenant JSON payloads from Angular
+
+                // 2. Completely deactivate CSRF filter protection lines for REST engine operations
                 .csrf(csrf -> csrf.disable())
-                // 3. Open your operational API route paths completely for development
+
+                // 3. Set up explicit request routing access controls
                 .authorizeHttpRequests(auth -> auth
+                                // Allow browsers to pre-flight check routes without getting a 403 block!
+                                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Explicitly clear the path rules for your cashier-login authentication ro
+                        .requestMatchers("/api/auth/cashier-login").permitAll()
+
+                        // Allow anything else for this local development stage
                         .anyRequest().permitAll()
-                );
-
-        return http.build();
+                )
+                .build(); // Builds and returns the chain safely in one single expression thread
     }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
