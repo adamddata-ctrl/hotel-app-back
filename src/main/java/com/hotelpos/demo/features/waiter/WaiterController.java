@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/waiters") // Fixed: Clean, absolute base path
-@CrossOrigin(origins = "http://localhost:4200") // Prevents browser CORS blocks
+//@CrossOrigin(origins = "http://localhost:4200") // Prevents browser CORS blocks
 public class WaiterController {
 
     @Autowired

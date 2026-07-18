@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/analytics") // Fixed: Clean, absolute base route directory
-@CrossOrigin(origins = "http://localhost:4200") // Prevents browser CORS blocks
+//@CrossOrigin(origins = "http://localhost:4200") // Prevents browser CORS blocks
 public class AnalyticsController {
 
     @PersistenceContext

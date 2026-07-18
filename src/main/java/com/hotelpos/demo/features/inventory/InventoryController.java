@@ -10,7 +10,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/inventory-management")
-@CrossOrigin(origins = "http://localhost:4200")
+//@CrossOrigin(origins = "http://localhost:4200")
 public class InventoryController {
 
     @Autowired
