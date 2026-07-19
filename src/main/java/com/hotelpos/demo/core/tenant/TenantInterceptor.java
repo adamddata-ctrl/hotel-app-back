@@ -12,23 +12,32 @@ public class TenantInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        String uri = request.getRequestURI();
+
+        // 1. Explicitly bypass auth and error paths to break the internal loop completely
+        if (uri.startsWith("/api/auth/") || uri.equals("/error")) {
+            return true;
+        }
+
         // Exclude preflight CORS requests automatically
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
 
         String tenantId = request.getHeader(TENANT_HEADER_NAME);
-
         if (tenantId != null && !tenantId.trim().isEmpty()) {
             TenantContext.setCurrentTenant(tenantId);
+            return true;
         } else {
-            // Keep your local dev configuration strategy safely isolated
-            TenantContext.setCurrentTenant("DEFAULT_TENANT_DEV");
+            // 2. Instead of a fake string that crashes production, reject the request cleanly
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Missing required X-Tenant-ID header.\"}");
+            return false; // Stops execution immediately before any database crash can loop
         }
-        return true;
     }
 
-    @Override
+        @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         // 🔥 THE MISSING PIECE: Force-purges the ThreadLocal space to prevent cross-tenant security leaks
         TenantContext.clear();

@@ -45,11 +45,28 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+
+        // 1. Authorize both local development and your exact deployed Render client domain
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:4200", "https://hotel-app-front-2xh0.onrender.com",
+                "https://onrender.com" // <-- REPLACE with your actual frontend Render URL
+        ));
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID"));
-        configuration.setExposedHeaders(List.of("X-Tenant-ID"));
+
+        // 2. Open up the allowed headers completely to allow modern browser handshakes to pass
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Tenant-ID",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        ));
+
+        configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID"));
         configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
