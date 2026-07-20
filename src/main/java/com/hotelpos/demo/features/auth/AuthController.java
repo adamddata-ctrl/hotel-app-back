@@ -79,4 +79,30 @@ public class AuthController {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).body(jsonResponse);
         }
     }
+
+    @Autowired
+    private TenantRegistrationService tenantRegistrationService;
+
+    @PostMapping("/register-tenant")
+    public ResponseEntity<?> registerTenant(@RequestBody TenantRegistrationDto registrationDto) {
+        try {
+            String newTenantId = tenantRegistrationService.registerNewRestaurant(registrationDto);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "New restaurant workspace created successfully!");
+            response.put("tenantId", newTenantId);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to create restaurant: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+
+
 }
