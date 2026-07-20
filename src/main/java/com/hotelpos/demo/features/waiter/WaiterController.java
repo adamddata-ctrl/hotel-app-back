@@ -8,38 +8,34 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/waiters") // Fixed: Clean, absolute base path
-//@CrossOrigin(origins = "http://localhost:4200") // Prevents browser CORS blocks
+@RequestMapping("/api/waiters")
 public class WaiterController {
-
     @Autowired
     private WaiterRepository waiterRepository;
-    /**
-     * Resolves active waiters working shifts. Automatically scopes query lookups
-     * using the current thread's ThreadLocal multi-tenant identity constraints.
-     */
-    @GetMapping("/active") // Fixed: Clean sub-path mapping
+
+    @GetMapping("/active")
     public ResponseEntity<List<Waiter>> getActiveWaitersByTenant() {
-        // 1. Fixed: Extracted the active tenant string from the context thread
+        // 1. Extract the active tracking tenant identifier from the thread context execution layer
         String activeTenantId = TenantContext.getCurrentTenant();
 
-        // 2. Query only the active waiters belonging to this specific restaurant space
+        // 2. Fetch only the active waiters bound to this specific workspace partition
         List<Waiter> waiters = waiterRepository.findByTenantIdAndActiveTrue(activeTenantId);
 
         return ResponseEntity.ok(waiters);
     }
-    /**
-     * Quick action shortcut to instantly onboard new staff directly from the frontend UI modal.
-     */
-    @PostMapping("/create") // Fixed: Removed invalid mapping wildcards
+
+    @PostMapping("/create")
     public ResponseEntity<Waiter> createWaiter(@RequestBody Waiter waiterPayload) {
+        // 1. Extract the secure tenant token from the active server transaction interceptor
         String activeTenantId = TenantContext.getCurrentTenant();
 
+        // 2. Instantiate and map the new data profile record safely
         Waiter waiter = new Waiter();
-        waiter.setTenantId(activeTenantId); // Secure multi-tenant anchoring assignment
+        waiter.setTenantId(activeTenantId);
         waiter.setWaiterName(waiterPayload.getWaiterName());
         waiter.setActive(true);
 
+        // 3. Persist the tracking state records directly to your live production database
         Waiter savedWaiter = waiterRepository.save(waiter);
         return ResponseEntity.ok(savedWaiter);
     }
