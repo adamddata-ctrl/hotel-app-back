@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/auth") // Standardized root path
+@RequestMapping("/auth") // Standardized root path
 //@CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
 
