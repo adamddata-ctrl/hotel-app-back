@@ -20,7 +20,7 @@ public class WaiterController {
 
         // Safety validation fallback if interceptor context is uninitialized
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
-            activeTenantId = "TNT_4F7017BF";
+            activeTenantId = "TNT_A842D2A4";
         }
 
         List<Waiter> waiters = waiterRepository.findByTenantIdAndActiveTrue(activeTenantId);
@@ -33,7 +33,7 @@ public class WaiterController {
 
         // Safety validation fallback if interceptor context is uninitialized
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
-            activeTenantId = "TNT_4F7017BF";
+            activeTenantId = "TNT_A842D2A4";
         }
 
         Waiter waiter = new Waiter();
