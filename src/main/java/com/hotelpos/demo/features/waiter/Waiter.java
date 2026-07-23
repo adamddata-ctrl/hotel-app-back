@@ -19,6 +19,9 @@ public class Waiter extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id; // Standard auto-incrementing ID integer for fast relational index mapping
 
+    @Column(name = "tenant_id", nullable = false)
+    private String tenantId;
+
     @Column(name = "waiter_name", nullable = false, length = 100)
     @JsonProperty("waiterName") // 2. Force the JSON key serialization to match your Angular variable
     private String waiterName; // The readable name of the service staff member
