@@ -1,5 +1,5 @@
 package com.hotelpos.demo.features.waiter;
-
+import com.fasterxml.jackson.annotation.JsonProperty; // 1. Add this import statement
 import com.hotelpos.demo.shared.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -7,10 +7,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-/**
- * Service Waiter Entity Profile. Tracks waitstaff assigned to capture customer
- * orders within a specific restaurant tenant's space.
- */
 @Entity
 @Table(name = "waiters")
 @Data
@@ -24,6 +20,7 @@ public class Waiter extends BaseEntity {
     private Integer id; // Standard auto-incrementing ID integer for fast relational index mapping
 
     @Column(name = "waiter_name", nullable = false, length = 100)
+    @JsonProperty("waiterName") // 2. Force the JSON key serialization to match your Angular variable
     private String waiterName; // The readable name of the service staff member
 
     @Column(name = "is_active", nullable = false)
