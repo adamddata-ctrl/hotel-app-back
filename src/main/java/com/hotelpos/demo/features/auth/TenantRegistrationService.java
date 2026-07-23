@@ -27,11 +27,17 @@ public class TenantRegistrationService {
         manager.setId("USR-MGMT-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         manager.setTenantId(uniqueTenantId);
         manager.setUsername(dto.getUsername());
-        manager.setRole(User.Role.OWNER); // Set to your matching enum or string entity property mapping
-        manager.setPinCode(passwordEncoder.encode(dto.getPinCode()));
-
-        // 3. Persist the database record to your active Railway MySQL instance
+        manager.setRole(User.Role.OWNER);
+        manager.setPassword(passwordEncoder.encode(dto.getPassword()));
         userRepository.save(manager);
+        // 3. Build the default front-of-house CASHIER rapid terminal staff profile
+        User cashier = new User();
+        cashier.setId("USR-CASH-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+        cashier.setTenantId(uniqueTenantId);
+        cashier.setUsername(dto.getFullName() + "_Cashier");
+        cashier.setRole(User.Role.CASHIER);
+        cashier.setPinCode(passwordEncoder.encode(dto.getPinCode()));
+        userRepository.save(cashier);
 
         return uniqueTenantId;
     }
