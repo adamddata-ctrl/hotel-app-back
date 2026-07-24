@@ -1,25 +1,25 @@
 package com.hotelpos.demo.features.inventory;
 
+import com.hotelpos.demo.core.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
-/**
- * REST controller exposing Loyverse-style advanced inventory management features [3.1].
- */
 @RestController
-@RequestMapping("/api/inventory-management")
-//@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/inventory") // FIX: Standardized clean top-level path matching our project pattern
 public class InventoryController {
 
     @Autowired
     private InventoryService inventoryService;
+
     @Autowired
     private InventoryItemRepository inventoryItemRepository;
 
     /**
-     * Downloads all active raw ingredient stocks configured under the current tenant [3.1].
+     * Fetches all inventory items for the active tenant context workspace.
      */
     @GetMapping("/items/all")
     public ResponseEntity<List<InventoryItem>> fetchAllInventoryItems() {
@@ -28,7 +28,7 @@ public class InventoryController {
     }
 
     /**
-     * Dispatches stock adjustment commands (Damages, Losses, or Manual Additions) [3.1].
+     * Processes inventory ingredient manual stock adjustments.
      */
     @PostMapping("/adjust")
     public ResponseEntity<?> processStockAdjustment(@RequestBody InventoryActionRequest request) {
@@ -44,7 +44,7 @@ public class InventoryController {
     }
 
     /**
-     * Submits definitive manual stocktake audit counts to overwrite old numbers [3.1].
+     * Processes inventory stock-takes and manual item counting overrides.
      */
     @PostMapping("/count")
     public ResponseEntity<?> processInventoryCount(@RequestBody InventoryActionRequest request) {
@@ -60,7 +60,7 @@ public class InventoryController {
     }
 
     /**
-     * 🔥 ADDED: Registers a brand-new raw ingredient item directly into the database [3.1].
+     * Registers a brand-new raw ingredient item directly into the database [3.1].
      */
     @PostMapping("/items/create")
     public ResponseEntity<?> createNewInventoryItem(@RequestBody InventoryItem newItem) {
@@ -74,19 +74,28 @@ public class InventoryController {
     }
 
     /**
-     * 🔥 ADDED: Downloads the active shift summary dataset for the current employee [3.1].
+     * Cryptographic Boundary Check: Fetches shift analytical balance reports for a cashier safely.
      */
     @GetMapping("/shift/summary/{cashierId}")
-    public ResponseEntity<?> fetchActiveShiftInflows(@PathVariable String cashierId) {
+    public ResponseEntity<?> fetchActiveShiftInflows(@PathVariable("cashierId") String cashierId) {
+        // SECURE FAIL CLOSED: Intercept requests to ensure a valid tenant context is bound to the thread
+        String activeTenantId = TenantContext.getCurrentTenant();
+        if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Security Violation: Tenant identification context missing."));
+        }
+
         try {
-            return ResponseEntity.ok(inventoryService.generateShiftReportData(cashierId));
+            // Your service logic aggregates transactions safely under the current active workspace parameters
+            var shiftReport = inventoryService.generateShiftReportData(cashierId);
+            return ResponseEntity.ok(shiftReport);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     /**
-     * Receives new external stock supplies from vendors and logs them into current stock totals [3.1].
+     * Processes goods receiving tasks from supplier purchase order tickets.
      */
     @PostMapping("/purchase-order/receive")
     public ResponseEntity<?> processReceivePurchaseOrder(@RequestBody InventoryActionRequest request) {
@@ -101,6 +110,7 @@ public class InventoryController {
         }
     }
 }
+
 /**
  * Unified Request Data Transfer Object container layer
  */

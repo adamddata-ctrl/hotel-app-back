@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/menu")
+@RequestMapping("/menu")
 //@CrossOrigin(origins = "http://localhost:4200") // Connects smoothly with your Angular dev server
 public class MenuController {
 

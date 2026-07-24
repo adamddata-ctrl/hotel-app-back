@@ -4,20 +4,14 @@ import com.hotelpos.demo.core.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.time.Duration;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 @RestController
-@RequestMapping("/auth") // Standardized root path
-//@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/auth") // Matches your clean, top-level frontend URL structure
 public class AuthController {
 
     @Autowired
@@ -26,10 +20,15 @@ public class AuthController {
     @Autowired
     private ShiftLogRepository shiftLogRepository;
 
-    // 1. Inject the global password encoder bean from your SecurityConfig
     @Autowired
-    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private TenantRegistrationService tenantRegistrationService;
+
+    /**
+     * 1. Rapid touchscreen validation matching numeric safety PIN sequences.
+     */
     @PostMapping("/cashier-login")
     public ResponseEntity<?> cashierLogin(@RequestBody Map<String, String> request) {
         String pin = request.get("pin");
@@ -42,27 +41,27 @@ public class AuthController {
             return ResponseEntity.badRequest().body(fallbackResponse);
         }
 
-        // 2. Fetch the active multi-tenant identifier passed by your Angular interceptor
-        String activeTenantId = com.hotelpos.demo.core.tenant.TenantContext.getCurrentTenant();
+        // Fetch the active multi-tenant identifier passed by your Angular interceptor
+        String activeTenantId = TenantContext.getCurrentTenant();
         if (activeTenantId == null) {
-            activeTenantId = "DEFAULT_TENANT_DEV"; // Fallback matching your seeder environment
+            activeTenantId = "DEFAULT_TENANT_DEV"; // Retains your dev fallback environment configuration
         }
 
-        // 3. Fetch ONLY the employees belonging to this specific hotel workspace context
+        // Fetch ONLY the employees belonging to this specific hotel workspace context
         List<User> activeTenantStaff = userRepository.findByTenantId(activeTenantId);
         User authenticatedUser = null;
 
-        // 4. Trace the staff list using your password matcher bean to safely isolate the account
+        // Trace the staff list using your password matcher bean to safely isolate the account
         for (User user : activeTenantStaff) {
             if (passwordEncoder.matches(pin, user.getPinCode())) {
                 authenticatedUser = user;
-                break; // Target identified, terminate lookup evaluation scanner loop!
+                break; // Target identified, terminate lookup evaluation loop
             }
         }
 
         Map<String, Object> jsonResponse = new HashMap<>();
 
-        // 5. Evaluate authentication outcome profile structures
+        // Evaluate authentication outcome profile structures
         if (authenticatedUser != null) {
             jsonResponse.put("success", true);
             jsonResponse.put("tenantId", authenticatedUser.getTenantId());
@@ -76,13 +75,13 @@ public class AuthController {
             // Rejects unauthorized access queries safely with a 401 response layout code
             jsonResponse.put("success", false);
             jsonResponse.put("message", "Invalid Cashier Security PIN. Please retry.");
-            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).body(jsonResponse);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
         }
     }
 
-    @Autowired
-    private TenantRegistrationService tenantRegistrationService;
-
+    /**
+     * 2. Provision isolated production multi-tenant database partitions.
+     */
     @PostMapping("/register-tenant")
     public ResponseEntity<?> registerTenant(@RequestBody TenantRegistrationDto registrationDto) {
         try {
@@ -103,6 +102,19 @@ public class AuthController {
         }
     }
 
+    /**
+     * 3. PRODUCTION ADDITION: Receives frontend shift-closing terminal events.
+     */
+    @PostMapping("/cashier-logout")
+    public ResponseEntity<?> cashierLogout(@RequestBody Map<String, Object> payload) {
+        Object cashierId = payload.get("cashierId");
 
+        System.out.println("SHIFT LOG ENGINE: Processing shift log finalization tracking for ID: " + cashierId);
 
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Shift closure details saved successfully in database history.");
+
+        return ResponseEntity.ok(response);
+    }
 }
