@@ -11,11 +11,12 @@ public class TenantInterceptor implements HandlerInterceptor {
     private static final String TENANT_HEADER_NAME = "X-Tenant-ID";
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         String uri = request.getRequestURI();
 
         // 1. Explicitly bypass auth and error paths to break the internal loop completely
-        if (uri.startsWith("/api/auth/") || uri.equals("/error")) {
+        if (uri.equals("/api/auth/register-tenant") || uri.equals("/error")) {
             return true;
         }
 

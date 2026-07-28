@@ -6,12 +6,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth") // Matches your clean, top-level frontend URL structure
+@RequestMapping("/api/auth") // Matches your clean, top-level frontend URL structure
 public class AuthController {
 
     @Autowired
@@ -27,7 +28,7 @@ public class AuthController {
     private TenantRegistrationService tenantRegistrationService;
 
     /**
-     * 1. Rapid touchscreen validation matching numeric safety PIN sequences.
+     * 1. Cashier PIN Authentication Endpoint
      */
     @PostMapping("/cashier-login")
     public ResponseEntity<?> cashierLogin(@RequestBody Map<String, String> request) {
@@ -43,9 +44,6 @@ public class AuthController {
 
         // Fetch the active multi-tenant identifier passed by your Angular interceptor
         String activeTenantId = TenantContext.getCurrentTenant();
-        if (activeTenantId == null) {
-            activeTenantId = "DEFAULT_TENANT_DEV"; // Retains your dev fallback environment configuration
-        }
 
         // Fetch ONLY the employees belonging to this specific hotel workspace context
         List<User> activeTenantStaff = userRepository.findByTenantId(activeTenantId);
@@ -67,7 +65,7 @@ public class AuthController {
             jsonResponse.put("tenantId", authenticatedUser.getTenantId());
             jsonResponse.put("cashierId", authenticatedUser.getId());
             jsonResponse.put("cashierName", authenticatedUser.getUsername());
-            jsonResponse.put("role", authenticatedUser.getRole().toString()); // Passes OWNER or CASHIER cleanly
+            jsonResponse.put("role", authenticatedUser.getRole().toString()); // Passes OWNER or CASHIER code
 
             System.out.println("AUTH ENGINE: Account successfully verified for user: " + authenticatedUser.getUsername());
             return ResponseEntity.ok(jsonResponse);
