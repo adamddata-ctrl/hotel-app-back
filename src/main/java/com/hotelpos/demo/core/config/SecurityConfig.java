@@ -35,7 +35,7 @@ public class SecurityConfig {
                                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Explicitly clear the path rules for your cashier-login authentication ro
-                        .requestMatchers("/api/auth/cashier-login", "/api/auth/register-tenant").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
 
                         // Allow anything else for this local development stage
                         .anyRequest().permitAll()
@@ -48,8 +48,8 @@ public class SecurityConfig {
 
         // 1. Authorize both local development and your exact deployed Render client domain
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:4200", "https://hotel-app-front-2xh0.onrender.com",
-                "https://onrender.com" // <-- REPLACE with your actual frontend Render URL
+                "http://localhost:4200", "https://hotel-app-front-2xh0.onrender.com"
+
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

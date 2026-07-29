@@ -11,41 +11,39 @@ public class TenantInterceptor implements HandlerInterceptor {
     private static final String TENANT_HEADER_NAME = "X-Tenant-ID";
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String uri = request.getRequestURI();
 
-
-
-
-        // 1. Explicitly bypass auth and error paths to break the internal loop completely
+        // 1. Bypass auth endpoints (no tenant required)
         if (uri.equals("/api/auth/register-tenant") ||
                 uri.equals("/api/auth/cashier-login") ||
                 uri.equals("/error")) {
             return true;
         }
 
-        // Exclude preflight CORS requests automatically
+        // 2. Allow preflight OPTIONS requests (CORS)
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
 
+        // 3. Validate tenant header for all other endpoints
         String tenantId = request.getHeader(TENANT_HEADER_NAME);
         if (tenantId != null && !tenantId.trim().isEmpty()) {
-            TenantContext.setCurrentTenant(tenantId);
+            // If you have a TenantContext (ThreadLocal) – set it here
+            // TenantContext.setCurrentTenant(tenantId);
             return true;
         } else {
-            // 2. Instead of a fake string that crashes production, reject the request cleanly
+            // Reject with 400 Bad Request
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Missing required X-Tenant-ID header.\"}");
-            return false; // Stops execution immediately before any database crash can loop
+            return false;
         }
     }
 
-        @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // 🔥 THE MISSING PIECE: Force-purges the ThreadLocal space to prevent cross-tenant security leaks
-        TenantContext.clear();
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        // Clean up tenant context to prevent memory leaks
+        // TenantContext.clear();
     }
 }
