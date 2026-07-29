@@ -31,27 +31,50 @@ public class AuthController {
      * 1. Cashier PIN Authentication Endpoint
      */
     @PostMapping("/cashier-login")
-    public ResponseEntity<?> cashierLogin(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> cashierLogin(@RequestBody Map<String, String> request) {
+        String pin = request.get("pin");
+
+        // Validate basic payload presence
+        if (pin == null || pin.trim().isEmpty()) {
+            Map<String, Object> fallbackResponse = new HashMap<>();
+            fallbackResponse.put("success", false);
+            fallbackResponse.put("message", "PIN is required.");
+            return ResponseEntity.badRequest().body(fallbackResponse);
+        }
+
+        // Fetch the active multi-tenant identifier passed by your Angular interceptor
         String activeTenantId = TenantContext.getCurrentTenant();
 
-        // 1. Gather all user profiles registered to this active workspace tenant context
-        List<User> tenantUsers = userRepository.findByTenantId(activeTenantId);
+        // Fetch ONLY the employees belonging to this specific hotel workspace context
+        List<User> activeTenantStaff = userRepository.findByTenantId(activeTenantId);
+        User authenticatedUser = null;
 
-        // 2. Loop through users and use BCrypt matching to evaluate the incoming plaintext pinCode
-        for (User user : tenantUsers) {
-            if (passwordEncoder.matches(request.getPinCode(), user.getPinCode())) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("status", "SUCCESS");
-                response.put("role", user.getRole().toString());
-                response.put("username", user.getUsername());
-                return ResponseEntity.ok(response);
+        // Trace the staff list using your password matcher bean to safely isolate the account
+        for (User user : activeTenantStaff) {
+            if (passwordEncoder.matches(pin, user.getPinCode())) {
+                authenticatedUser = user;
+                break; // Target identified, terminate lookup evaluation loop
             }
         }
 
-        // 3. Fallback handle rejection if no profiles match the credential criteria
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Invalid pin credentials for the current tenant space");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        Map<String, Object> jsonResponse = new HashMap<>();
+
+        // Evaluate authentication outcome profile structures
+        if (authenticatedUser != null) {
+            jsonResponse.put("success", true);
+            jsonResponse.put("tenantId", authenticatedUser.getTenantId());
+            jsonResponse.put("cashierId", authenticatedUser.getId());
+            jsonResponse.put("cashierName", authenticatedUser.getUsername());
+            jsonResponse.put("role", authenticatedUser.getRole().toString()); // Passes OWNER or CASHIER code
+
+            System.out.println("AUTH ENGINE: Account successfully verified for user: " + authenticatedUser.getUsername());
+            return ResponseEntity.ok(jsonResponse);
+        } else {
+            // Rejects unauthorized access queries safely with a 401 response layout code
+            jsonResponse.put("success", false);
+            jsonResponse.put("message", "Invalid Cashier Security PIN. Please retry.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
+        }
     }
 
     /**
