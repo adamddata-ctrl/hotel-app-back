@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth") // Matches your clean, top-level frontend URL structure
+@RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
@@ -29,6 +29,7 @@ public class AuthController {
 
     /**
      * 1. Cashier PIN Authentication Endpoint
+     * ✅ FIXED: Now handles missing tenant context gracefully.
      */
     @PostMapping("/cashier-login")
     public ResponseEntity<?> cashierLogin(@RequestBody Map<String, String> request) {
@@ -45,8 +46,16 @@ public class AuthController {
         // Fetch the active multi-tenant identifier passed by your Angular interceptor
         String activeTenantId = TenantContext.getCurrentTenant();
 
-        // Fetch ONLY the employees belonging to this specific hotel workspace context
-        List<User> activeTenantStaff = userRepository.findByTenantId(activeTenantId);
+        // ✅ FIX: If no tenant context, search all users (global login)
+        List<User> activeTenantStaff;
+        if (activeTenantId != null && !activeTenantId.trim().isEmpty()) {
+            activeTenantStaff = userRepository.findByTenantId(activeTenantId);
+            System.out.println("AUTH ENGINE: Searching within tenant: " + activeTenantId);
+        } else {
+            activeTenantStaff = userRepository.findAll();
+            System.out.println("AUTH ENGINE: No tenant context – searching all users.");
+        }
+
         User authenticatedUser = null;
 
         // Trace the staff list using your password matcher bean to safely isolate the account
@@ -65,12 +74,11 @@ public class AuthController {
             jsonResponse.put("tenantId", authenticatedUser.getTenantId());
             jsonResponse.put("cashierId", authenticatedUser.getId());
             jsonResponse.put("cashierName", authenticatedUser.getUsername());
-            jsonResponse.put("role", authenticatedUser.getRole().toString()); // Passes OWNER or CASHIER code
+            jsonResponse.put("role", authenticatedUser.getRole().toString());
 
             System.out.println("AUTH ENGINE: Account successfully verified for user: " + authenticatedUser.getUsername());
             return ResponseEntity.ok(jsonResponse);
         } else {
-            // Rejects unauthorized access queries safely with a 401 response layout code
             jsonResponse.put("success", false);
             jsonResponse.put("message", "Invalid Cashier Security PIN. Please retry.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
