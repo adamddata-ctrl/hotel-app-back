@@ -15,8 +15,13 @@ public class TenantInterceptor implements HandlerInterceptor {
             throws Exception {
         String uri = request.getRequestURI();
 
+
+
+
         // 1. Explicitly bypass auth and error paths to break the internal loop completely
-        if (uri.equals("/api/auth/register-tenant") || uri.equals("/error")) {
+        if (uri.equals("/api/auth/register-tenant") ||
+                uri.equals("/api/auth/cashier-login") ||
+                uri.equals("/error")) {
             return true;
         }
 

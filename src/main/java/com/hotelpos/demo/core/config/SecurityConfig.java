@@ -35,7 +35,7 @@ public class SecurityConfig {
                                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Explicitly clear the path rules for your cashier-login authentication ro
-                        .requestMatchers("/api/auth/cashier-login").permitAll()
+                        .requestMatchers("/api/auth/cashier-login", "/api/auth/register-tenant").permitAll()
 
                         // Allow anything else for this local development stage
                         .anyRequest().permitAll()
