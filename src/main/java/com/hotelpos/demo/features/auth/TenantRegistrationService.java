@@ -17,31 +17,29 @@ public class TenantRegistrationService {
 
     @Transactional
     public String registerNewRestaurant(TenantRegistrationDto dto) {
-        // 1. Generate an isolated, random business workspace key string
         String uniqueTenantId = "TNT_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // 2. Build the primary, root MANAGER administrative staff profile
+        // Owner/Manager
         User manager = new User();
         manager.setId("USR-MGMT-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         manager.setTenantId(uniqueTenantId);
-        manager.setUsername(dto.getOwnerUsername());              // ✅ UPDATED
+        manager.setUsername(dto.getUsername());              // ✅ Changed from getOwnerUsername()
         manager.setRole(User.Role.OWNER);
-        manager.setPassword(passwordEncoder.encode(dto.getOwnerPassword())); // ✅ UPDATED
+        manager.setPassword(passwordEncoder.encode(dto.getPassword())); // ✅ Changed from getOwnerPassword()
         userRepository.save(manager);
 
-        // 3. Build the default front-of-house CASHIER rapid terminal staff profile
+        // Cashier
         User cashier = new User();
         cashier.setId("USR-CASH-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         cashier.setTenantId(uniqueTenantId);
-        cashier.setUsername(dto.getRestaurantName() + "_Cashier"); // ✅ UPDATED (uses restaurantName)
+        cashier.setUsername(dto.getFullName() + "_Cashier"); // ✅ Changed from getRestaurantName()
         cashier.setRole(User.Role.CASHIER);
 
-        // ✅ Handle the cashier PIN – use the frontend value or fallback
-        String cashierPin = dto.getDefaultCashierPin();
+        String cashierPin = dto.getPinCode();                // ✅ Changed from getDefaultCashierPin()
         if (cashierPin == null || cashierPin.isEmpty()) {
-            cashierPin = "1234"; // fallback default PIN
+            cashierPin = "1234";
         }
-        cashier.setPinCode(passwordEncoder.encode(cashierPin)); // ✅ UPDATED
+        cashier.setPinCode(passwordEncoder.encode(cashierPin));
         userRepository.save(cashier);
 
         return uniqueTenantId;
