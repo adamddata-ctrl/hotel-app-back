@@ -1,7 +1,5 @@
 package com.hotelpos.demo.features.auth;
 
-import com.hotelpos.demo.features.auth.User;
-import com.hotelpos.demo.features.auth.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,17 +24,24 @@ public class TenantRegistrationService {
         User manager = new User();
         manager.setId("USR-MGMT-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         manager.setTenantId(uniqueTenantId);
-        manager.setUsername(dto.getUsername());
+        manager.setUsername(dto.getOwnerUsername());              // ✅ UPDATED
         manager.setRole(User.Role.OWNER);
-        manager.setPassword(passwordEncoder.encode(dto.getPassword()));
+        manager.setPassword(passwordEncoder.encode(dto.getOwnerPassword())); // ✅ UPDATED
         userRepository.save(manager);
+
         // 3. Build the default front-of-house CASHIER rapid terminal staff profile
         User cashier = new User();
         cashier.setId("USR-CASH-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         cashier.setTenantId(uniqueTenantId);
-        cashier.setUsername(dto.getFullName() + "_Cashier");
+        cashier.setUsername(dto.getRestaurantName() + "_Cashier"); // ✅ UPDATED (uses restaurantName)
         cashier.setRole(User.Role.CASHIER);
-        cashier.setPinCode(passwordEncoder.encode(dto.getPinCode()));
+
+        // ✅ Handle the cashier PIN – use the frontend value or fallback
+        String cashierPin = dto.getDefaultCashierPin();
+        if (cashierPin == null || cashierPin.isEmpty()) {
+            cashierPin = "1234"; // fallback default PIN
+        }
+        cashier.setPinCode(passwordEncoder.encode(cashierPin)); // ✅ UPDATED
         userRepository.save(cashier);
 
         return uniqueTenantId;
