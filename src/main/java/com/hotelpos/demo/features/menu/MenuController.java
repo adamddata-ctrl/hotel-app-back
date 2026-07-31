@@ -4,25 +4,24 @@ import com.hotelpos.demo.core.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap; // 🔥 FIXES LINE 57: Imports the HashMap collection builder class
+import java.util.HashMap;
 import java.util.Map;
-
 import java.util.List;
 
 @RestController
-@RequestMapping("/menu")
-//@CrossOrigin(origins = "http://localhost:4200") // Connects smoothly with your Angular dev server
+@RequestMapping("/api/menu-items") // 🔥 FIXED: Added "/api" to match your Angular environment.ts
 public class MenuController {
 
     @Autowired
     private MenuItemRepository menuItemRepository;
+
     /**
      * Pulls the full localized food and beverage product array matrix.
      * Automatically scopes lookups using the active ThreadLocal multi-tenant identity.
+     * 🔥 FIXED: Changed from "/all" to root "/" to match frontend request.
      */
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
-
         // 1. Safely extract the tenant ID token handled by our background WebConfig interceptor firewall
         String activeTenantId = TenantContext.getCurrentTenant();
 
@@ -36,8 +35,9 @@ public class MenuController {
     /**
      * Registers a new custom product menu option into the database.
      * Automatically captures the caller workspace identity from the thread context firewall.
+     * 🔥 FIXED: Changed from "/add" to root "/" to match frontend request to "/menu-items/create".
      */
-    @PostMapping("/add")
+    @PostMapping
     public ResponseEntity<?> addMenuItemToCatalog(@RequestBody MenuItem newItem) {
 
         // 1. Defend against malformed form inputs or missing item descriptions
@@ -70,11 +70,4 @@ public class MenuController {
             ));
         }
     }
-
-
-
-
-
-
-
 }

@@ -7,8 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/restaurants")
-//@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/api/restaurants") // 🔥 FIXED: Added "/api" prefix to match your frontend environment.ts
 public class RestaurantController {
 
     @Autowired

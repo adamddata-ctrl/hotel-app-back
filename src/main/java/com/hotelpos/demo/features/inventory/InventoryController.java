@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/inventory") // FIX: Standardized clean top-level path matching our project pattern
+@RequestMapping("/api/inventory") // 🔥 FIXED: Added "/api" prefix to match your frontend environment.ts
 public class InventoryController {
 
     @Autowired
@@ -23,7 +23,7 @@ public class InventoryController {
      */
     @GetMapping("/items/all")
     public ResponseEntity<List<InventoryItem>> fetchAllInventoryItems() {
-        // Your TenantInterceptor filters this repository call by tenant automatically [3.1]!
+        // Your TenantInterceptor filters this repository call by tenant automatically!
         return ResponseEntity.ok(inventoryItemRepository.findAll());
     }
 
@@ -60,12 +60,13 @@ public class InventoryController {
     }
 
     /**
-     * Registers a brand-new raw ingredient item directly into the database [3.1].
+     * Registers a brand-new raw ingredient item directly into the database.
      */
     @PostMapping("/items/create")
     public ResponseEntity<?> createNewInventoryItem(@RequestBody InventoryItem newItem) {
         try {
-            // Your multi-tenant TenantInterceptor binds the active tenant_id automatically! [3.1]
+            // Your TenantInterceptor binds the active tenant_id to the TenantContext automatically.
+            // Because InventoryItem extends BaseEntity, @PrePersist will pull it and assign it correctly!
             InventoryItem saved = inventoryItemRepository.save(newItem);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
@@ -86,7 +87,6 @@ public class InventoryController {
         }
 
         try {
-            // Your service logic aggregates transactions safely under the current active workspace parameters
             var shiftReport = inventoryService.generateShiftReportData(cashierId);
             return ResponseEntity.ok(shiftReport);
         } catch (Exception e) {
@@ -117,5 +117,5 @@ public class InventoryController {
 @lombok.Data
 class InventoryActionRequest {
     private Long itemId;
-    private double quantityValue; // Set to 'double' to cleanly support fractional weights [3.1]
+    private double quantityValue;
 }
