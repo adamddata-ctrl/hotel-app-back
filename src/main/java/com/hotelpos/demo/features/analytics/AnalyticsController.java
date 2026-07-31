@@ -22,6 +22,10 @@ public class AnalyticsController {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Autowired
+
+    private OrderRepository orderRepository;
+
     /**
      * Aggregates total business operational revenue metrics for a specific targeted date.
      */
@@ -92,7 +96,7 @@ public class AnalyticsController {
             @RequestParam(required = false) Integer month) { // 💡 Added to match Angular URL &month=
 
         // Automatically retrieve your tenant context from your thread-safe storage block
-        String tenantId = "DEFAULT_TENANT_DEV";
+        String tenantId = TenantContext.getCurrentTenant();
 
         // Call your updated query method
         List<Object[]> rawData = orderRepository.findMenuPopularityNative(tenantId);
@@ -114,12 +118,7 @@ public class AnalyticsController {
 
 
 
-    @Autowired
-
-
-
-
-    private OrderRepository orderRepository; // 🔥 FIXED: Simplified type path declaration
+    // 🔥 FIXED: Simplified type path declaration
    // private com.hotelpos.demo.features.checkout.OrderRepository orderRepository; // Injected to access transaction records
 
     /**

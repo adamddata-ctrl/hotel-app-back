@@ -2,6 +2,7 @@ package com.hotelpos.demo.core.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,48 +14,60 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                // 1. Explicitly hook your customized cross-origin settings
+                // 1. Hook your customized CORS settings
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 2. Completely deactivate CSRF filter protection lines for REST engine operations
+                // 2. Deactivate CSRF for REST APIs
                 .csrf(csrf -> csrf.disable())
 
-                // 3. Set up explicit request routing access controls
+                // 3. Define public vs protected endpoints
                 .authorizeHttpRequests(auth -> auth
-                                // Allow browsers to pre-flight check routes without getting a 403 block!
-                                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        // Allow browser preflight (OPTIONS) requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Explicitly clear the path rules for your cashier-login authentication ro
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // Public authentication & registration endpoints
+                        .requestMatchers("/api/auth/register-tenant").permitAll()
+                        .requestMatchers("/api/auth/cashier-login").permitAll()
 
-                        // Allow anything else for this local development stage
+                        // Allow Spring Boot's default error handling
+                        .requestMatchers("/error").permitAll()
+
+                        // All other endpoints are validated by your TenantInterceptor
+                        // (header validation + frontend guards). Keeping this permissive
+                        // ensures your interceptor controls access without needing a JWT filter.
                         .anyRequest().permitAll()
                 )
-                .build(); // Builds and returns the chain safely in one single expression thread
+                .build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 1. Authorize both local development and your exact deployed Render client domain
+        // Authorize both local dev and your live Render frontend
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:4200", "https://hotel-app-front-2xh0.onrender.com"
-
+                "http://localhost:4200",
+                "https://hotel-app-front-2xh0.onrender.com"
         ));
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
 
-        // 2. Open up the allowed headers completely to allow modern browser handshakes to pass
+        // Allow all headers your frontend sends, including the custom tenant header
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
@@ -64,7 +77,10 @@ public class SecurityConfig {
                 "X-Requested-With"
         ));
 
+        // Expose the tenant ID header so the frontend can read it if needed
         configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID"));
+
+        // Allow cookies / credentials to be sent
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

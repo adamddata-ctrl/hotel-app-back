@@ -1,9 +1,12 @@
 package com.hotelpos.demo.features.auth;
 
+import com.hotelpos.demo.features.restaurant.Restaurant;
+import com.hotelpos.demo.features.restaurant.RestaurantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.UUID;
 
 @Service
@@ -13,31 +16,50 @@ public class TenantRegistrationService {
     private UserRepository userRepository;
 
     @Autowired
+    private RestaurantRepository restaurantRepository; // ✅ ADDED
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Transactional
     public String registerNewRestaurant(TenantRegistrationDto dto) {
+        // Generate a unique tenant ID
         String uniqueTenantId = "TNT_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // Owner/Manager
+        // =========================================================
+        // 1. CREATE AND SAVE THE RESTAURANT (TENANT) RECORD
+        // =========================================================
+        Restaurant restaurant = new Restaurant();
+        restaurant.setId(uniqueTenantId);
+        restaurant.setName(dto.getFullName());
+        // Use a placeholder email if your DTO doesn't have an email field
+        restaurant.setOwnerEmail(dto.getUsername() + "@restaurant.local");
+        restaurant.setActive(true);
+        restaurantRepository.save(restaurant); // ✅ NOW SAVED
+
+        // =========================================================
+        // 2. CREATE THE OWNER / MANAGER USER
+        // =========================================================
         User manager = new User();
         manager.setId("USR-MGMT-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         manager.setTenantId(uniqueTenantId);
-        manager.setUsername(dto.getUsername());              // ✅ Changed from getOwnerUsername()
+        manager.setUsername(dto.getUsername());
         manager.setRole(User.Role.OWNER);
-        manager.setPassword(passwordEncoder.encode(dto.getPassword())); // ✅ Changed from getOwnerPassword()
+        manager.setPassword(passwordEncoder.encode(dto.getPassword()));
         userRepository.save(manager);
 
-        // Cashier
+        // =========================================================
+        // 3. CREATE THE DEFAULT CASHIER USER
+        // =========================================================
         User cashier = new User();
         cashier.setId("USR-CASH-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
         cashier.setTenantId(uniqueTenantId);
-        cashier.setUsername(dto.getFullName() + "_Cashier"); // ✅ Changed from getRestaurantName()
+        cashier.setUsername(dto.getFullName() + "_Cashier");
         cashier.setRole(User.Role.CASHIER);
 
-        String cashierPin = dto.getPinCode();                // ✅ Changed from getDefaultCashierPin()
+        String cashierPin = dto.getPinCode();
         if (cashierPin == null || cashierPin.isEmpty()) {
-            cashierPin = "1234";
+            cashierPin = "1234"; // Fallback default
         }
         cashier.setPinCode(passwordEncoder.encode(cashierPin));
         userRepository.save(cashier);

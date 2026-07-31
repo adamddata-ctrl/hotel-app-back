@@ -29,8 +29,7 @@ public class TenantInterceptor implements HandlerInterceptor {
         // 3. Validate tenant header for all other endpoints
         String tenantId = request.getHeader(TENANT_HEADER_NAME);
         if (tenantId != null && !tenantId.trim().isEmpty()) {
-            // If you have a TenantContext (ThreadLocal) – set it here
-            // TenantContext.setCurrentTenant(tenantId);
+            TenantContext.setCurrentTenant(tenantId); // ✅ UNCOMMENT THIS
             return true;
         } else {
             // Reject with 400 Bad Request

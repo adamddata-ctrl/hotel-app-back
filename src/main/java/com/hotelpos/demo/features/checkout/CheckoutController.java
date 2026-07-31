@@ -9,13 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.time.LocalTime;
+import java.util.*;
 
 @RestController
-@RequestMapping("/checkout") // Standardized clean top-level path matching our project pattern
+@RequestMapping("/api/checkout") // ✅ FIXED: Added "/api" prefix to match frontend environment.apiUrl
 public class CheckoutController {
 
     @Autowired
@@ -28,154 +27,165 @@ public class CheckoutController {
     private InventoryService inventoryService;
 
     /**
-     * Receives order ticket streams from your Angular touchscreen terminal grid workspace.
+     * Receives order ticket streams from your Angular touchscreen terminal.
+     * Deducts inventory automatically and archives the transaction.
      */
     @PostMapping("/order")
-    @Transactional // Ensures atomic multi-table execution data rollbacks on execution faults
+    @Transactional
     public ResponseEntity<?> checkoutOrder(@RequestBody OrderCreateRequest request) {
 
+        // 1. Validate request payload
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Cannot checkout an empty order"));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Cannot checkout an empty order."));
         }
 
-        // Extricate the active restaurant isolation ID securely from the thread context firewall
+        // 2. Extract active multi-tenant ID from thread-safe context
         String activeTenantId = TenantContext.getCurrentTenant();
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Security Violation: Target tenant context missing."));
+                    .body(Map.of("error", "Security Violation: Tenant context missing."));
         }
 
         try {
-            // 1. Instantiates your Master Parent record mapping details
+            // 3. Build the master Order entity
             Order order = new Order();
-            order.setTenantId(activeTenantId); // CRITICAL MULTI-TENANT FIX: Encapsulates records under isolated tenant block
+            order.setTenantId(activeTenantId);
             order.setCashierId(request.getCashierId());
             order.setWaiterId(request.getWaiterId());
             order.setTotalAmount(request.getTotalAmount());
 
-            // 2. Maps the incoming payload array items out to your relational entities
+            // 4. Build child OrderItem entities and bind them to the order
             List<OrderItem> orderItems = new ArrayList<>();
             for (OrderItemRequest itemReq : request.getItems()) {
-                OrderItem detailItem = new OrderItem();
-                detailItem.setOrder(order); // Crucial: Explicitly binds parent entity to child record
-                detailItem.setItemId(itemReq.getItemId());
-                detailItem.setQuantity(itemReq.getQuantity());
-                detailItem.setUnitPrice(itemReq.getUnitPrice());
-                orderItems.add(detailItem);
+                OrderItem detail = new OrderItem();
+                detail.setOrder(order);
+                detail.setItemId(itemReq.getItemId());
+                detail.setQuantity(itemReq.getQuantity());
+                detail.setUnitPrice(itemReq.getUnitPrice());
+                orderItems.add(detail);
             }
-
-            // Bind list array data maps back down onto primary schema model instance
             order.setItems(orderItems);
 
-            // 3. Persist transaction context logs down onto your physical database layer
+            // 5. Persist the entire order graph
             Order savedOrder = orderRepository.save(order);
 
-            // ADDED: Deduct stock metrics automatically for all items
+            // 6. Deduct stock for each ordered item
             if (savedOrder.getItems() != null) {
                 for (OrderItem item : savedOrder.getItems()) {
-                    menuItemRepository.findById(item.getItemId()).ifPresent(menuItem -> {
-                        inventoryService.deductStockForOrder(menuItem, item.getQuantity());
-                    });
+                    menuItemRepository.findById(item.getItemId()).ifPresent(menuItem ->
+                            inventoryService.deductStockForOrder(menuItem, item.getQuantity())
+                    );
                 }
             }
 
-            Map<String, Object> successResponse = new HashMap<>();
-            successResponse.put("success", true);
-            successResponse.put("orderId", savedOrder.getId());
-            successResponse.put("message", "Transaction archived. Kitchen routing ticket released.");
+            // 7. Return success response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("orderId", savedOrder.getId());
+            response.put("message", "Transaction archived. Kitchen ticket released.");
 
-            return ResponseEntity.ok(successResponse);
+            return ResponseEntity.ok(response);
 
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", "Transaction isolation breakdown fault",
-                    "details", ex.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Transaction failed: " + ex.getMessage()
+                    ));
         }
     }
 
     /**
-     * Streams all active unfulfilled kitchen tickets for the requesting restaurant.
+     * Streams all active (unfulfilled) kitchen tickets for the current tenant.
+     * Used by the Kitchen Screen component.
      */
     @GetMapping("/orders/open")
     public ResponseEntity<?> getOpenKitchenOrders() {
-        try {
-            // 1. Extricate the active restaurant isolation ID securely from the thread context firewall
-            String activeTenantId = TenantContext.getCurrentTenant();
-            if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Access Denied: Missing multi-tenant identification context."));
-            }
+        String activeTenantId = TenantContext.getCurrentTenant();
 
-            // 2. Fetch order entities filtered by the active tenant boundary
+        if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Access Denied: Tenant context missing."));
+        }
+
+        try {
             List<Order> openOrders = orderRepository.findByTenantId(activeTenantId);
 
-            // 3. Map database relations down onto lightweight scannable JSON KDS array matrices
-            List<Map<String, Object>> kdsPayload = new ArrayList<>();
+            List<Map<String, Object>> kitchenDisplayItems = new ArrayList<>();
 
             for (Order order : openOrders) {
                 Map<String, Object> ticket = new HashMap<>();
                 ticket.put("id", order.getId());
-                ticket.put("waiterName", "Server #" + order.getWaiterId()); // Fixed: Maps to your correct properties parameters
-                ticket.put("orderTime", order.getCreatedAt() != null ? order.getCreatedAt().toLocalTime() : null);
+                ticket.put("waiterName", "Server #" + order.getWaiterId());
 
-                // Nest line item quantities and descriptions cleanly
+                // ✅ FIXED: Null-safe time extraction
+                if (order.getCreatedAt() != null) {
+                    ticket.put("orderTime", order.getCreatedAt().toLocalTime());
+                } else {
+                    ticket.put("orderTime", LocalTime.now());
+                }
+
                 List<Map<String, Object>> itemsList = new ArrayList<>();
                 for (OrderItem item : order.getItems()) {
                     Map<String, Object> itemData = new HashMap<>();
 
-                    // Look up the clear-text item name description string from your menu repository utility
                     String actualItemName = menuItemRepository.findById(item.getItemId())
                             .map(MenuItem::getItemName)
                             .orElse("Unknown Product");
 
                     itemData.put("itemName", actualItemName);
-                    itemData.put("quantity", item.getQuantity()); // Fixed: Maps to your correct quantities parameters
+                    itemData.put("quantity", item.getQuantity());
                     itemsList.add(itemData);
                 }
 
                 ticket.put("items", itemsList);
-                kdsPayload.add(ticket);
+                kitchenDisplayItems.add(ticket);
             }
 
-            return ResponseEntity.ok(kdsPayload);
+            return ResponseEntity.ok(kitchenDisplayItems);
 
         } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", ex.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch kitchen orders: " + ex.getMessage()));
         }
     }
 
     /**
-     * Cryptographic Boundary Check: Prevent cross-tenant database profile pollution logic
+     * Marks a kitchen ticket as fulfilled and removes it from the active queue.
+     * Includes a cryptographic tenant-boundary check to prevent cross-tenant deletion.
      */
-    @PostMapping("/orders/fulfill/{id}") // Path variable match token
-    public ResponseEntity<?> fulfillKitchenOrderTicket(@PathVariable("id") Integer id) { // FIXED: Binds template variables parameter naming precisely
+    @PostMapping("/orders/fulfill/{id}")
+    @Transactional
+    public ResponseEntity<?> fulfillKitchenOrderTicket(@PathVariable("id") Integer id) {
         String activeTenantId = TenantContext.getCurrentTenant();
 
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Access Denied: Tenant validation failed."));
+                    .body(Map.of("error", "Access Denied: Tenant context missing."));
         }
 
-        return orderRepository.findById(id)
-                .map(order -> {
-                    // Cryptographic Boundary Check: Prevent cross-tenant database profile pollution logic
-                    if (!order.getTenantId().equals(activeTenantId)) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                .body((Object) Map.of("error", "Access Denied"));
-                    }
+        Optional<Order> orderOptional = orderRepository.findById(id);
 
-                    // Delete the ticket directly from the active kitchen table row registry
-                    orderRepository.delete(order);
+        if (orderOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Ticket not found."));
+        }
 
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", true);
-                    response.put("message", "Ticket successfully dispatched from production lines.");
+        Order order = orderOptional.get();
 
-                    return ResponseEntity.ok((Object) response);
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Target ticket context not found")));
+        // ✅ Security boundary check: Prevent cross-tenant manipulation
+        if (!order.getTenantId().equals(activeTenantId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access Denied: Ticket belongs to another tenant."));
+        }
+
+        // Delete the ticket from the active queue
+        orderRepository.delete(order);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Ticket #" + id + " successfully fulfilled and removed from queue.");
+
+        return ResponseEntity.ok(response);
     }
 }
