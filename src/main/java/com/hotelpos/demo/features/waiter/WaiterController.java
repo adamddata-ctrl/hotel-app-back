@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/waiters") // 🔥 FIXED: Added '/api' to match your frontend environment
+@RequestMapping("/api/waiters") // ✅ FIXED: Added "/api" to match your frontend environment.ts
 public class WaiterController {
 
     @Autowired
@@ -36,8 +36,7 @@ public class WaiterController {
     /**
      * Provisions a brand new waiter entry under the active tenant's workspace partition.
      */
-    @PostMapping("/create") // Note: Your frontend uses POST to /api/waiters, NOT /api/waiters/create.
-    // You might need to change this to @PostMapping("/") or update your frontend call to match.
+    @PostMapping // ✅ FIXED: Removed "/create" because your frontend POSTs to "/api/waiters"
     public ResponseEntity<?> createWaiter(@RequestBody Waiter waiterPayload) {
         String activeTenantId = TenantContext.getCurrentTenant();
 
@@ -48,7 +47,7 @@ public class WaiterController {
 
         Waiter waiter = new Waiter();
         waiter.setWaiterName(waiterPayload.getWaiterName());
-        waiter.setTenantId(activeTenantId); // Forces the record to save under the isolated tenant block
+        waiter.setTenantId(activeTenantId);
         waiter.setActive(true);
 
         Waiter savedWaiter = waiterRepository.save(waiter);
