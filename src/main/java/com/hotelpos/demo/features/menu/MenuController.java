@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/menu-items") // 🔥 FIXED: Added "/api" to match your Angular environment.ts
+@RequestMapping("/api/menu-items")
 public class MenuController {
 
     @Autowired
@@ -17,30 +17,21 @@ public class MenuController {
 
     /**
      * Pulls the full localized food and beverage product array matrix.
-     * Automatically scopes lookups using the active ThreadLocal multi-tenant identity.
-     * 🔥 FIXED: Changed from "/all" to root "/" to match frontend request.
+     * 🔥 FIXED: Now handles BOTH /api/menu-items AND /api/menu-items/active requests.
      */
-    @GetMapping
+    @GetMapping({"/", "/active"})
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
-        // 1. Safely extract the tenant ID token handled by our background WebConfig interceptor firewall
         String activeTenantId = TenantContext.getCurrentTenant();
-
-        // 2. Query only the inventory records belonging to this specific tenant workspace space
         List<MenuItem> catalog = menuItemRepository.findByTenantId(activeTenantId);
-
-        // 3. Stream data parameters back upstream to populate the cashier touchscreen product grid layout
         return ResponseEntity.ok(catalog);
     }
 
     /**
      * Registers a new custom product menu option into the database.
-     * Automatically captures the caller workspace identity from the thread context firewall.
-     * 🔥 FIXED: Changed from "/add" to root "/" to match frontend request to "/menu-items/create".
      */
     @PostMapping
     public ResponseEntity<?> addMenuItemToCatalog(@RequestBody MenuItem newItem) {
 
-        // 1. Defend against malformed form inputs or missing item descriptions
         if (newItem.getItemName() == null || newItem.getItemName().trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Product description name label cannot be empty."));
         }
@@ -49,11 +40,9 @@ public class MenuController {
         }
 
         try {
-            // 2. Extricate the active restaurant workspace ID from our background ThreadLocal tracker
             String activeTenantId = TenantContext.getCurrentTenant();
             newItem.setTenantId(activeTenantId);
 
-            // 3. Persist the inventory catalog row down into your MySQL engine matrix
             MenuItem savedItem = menuItemRepository.save(newItem);
 
             Map<String, Object> successResponse = new HashMap<>();
