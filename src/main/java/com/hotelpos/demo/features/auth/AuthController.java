@@ -60,7 +60,8 @@ public class AuthController {
 
         // Trace the staff list using your password matcher bean to safely isolate the account
         for (User user : activeTenantStaff) {
-            if (passwordEncoder.matches(pin, user.getPinCode())) {
+            // 🔥 FIXED: Checks BOTH the Cashier's PIN code AND the Owner's password
+            if (passwordEncoder.matches(pin, user.getPinCode()) || passwordEncoder.matches(pin, user.getPassword())) {
                 authenticatedUser = user;
                 break; // Target identified, terminate lookup evaluation loop
             }
