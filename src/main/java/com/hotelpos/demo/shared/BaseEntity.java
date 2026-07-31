@@ -11,9 +11,7 @@ import org.hibernate.annotations.ParamDef;
 
 @Data
 @MappedSuperclass
-// 1. Define a global tenant parameter structure
 @FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
-// 2. Instruct Hibernate to append this WHERE condition automatically to SELECT/UPDATE/DELETE actions
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public abstract class BaseEntity {
 
@@ -24,9 +22,9 @@ public abstract class BaseEntity {
     public void onPrePersist() {
         String currentTenant = TenantContext.getCurrentTenant();
         if (currentTenant == null || currentTenant.trim().isEmpty()) {
-            this.tenantId = "DEFAULT_TENANT_DEV";
-        } else {
-            this.tenantId = currentTenant;
+            // CRITICAL FIX: Throw exception instead of saving to "DEFAULT_TENANT_DEV"
+            throw new IllegalStateException("Cannot persist entity without a valid tenant context.");
         }
+        this.tenantId = currentTenant;
     }
 }

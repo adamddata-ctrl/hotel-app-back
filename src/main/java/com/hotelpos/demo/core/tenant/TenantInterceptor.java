@@ -43,6 +43,6 @@ public class TenantInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         // Clean up tenant context to prevent memory leaks
-        // TenantContext.clear();
+        TenantContext.clear();
     }
 }
