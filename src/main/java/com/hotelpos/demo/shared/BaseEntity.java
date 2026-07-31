@@ -25,6 +25,6 @@ public abstract class BaseEntity {
             // 🔥 CRITICAL FIX: Throw exception instead of saving to "DEFAULT_TENANT_DEV"
             throw new IllegalStateException("Cannot persist entity without a valid tenant context.");
         }
-        this.tenantId = currentTenant;
+         this.tenantId = currentTenant;
     }
 }
