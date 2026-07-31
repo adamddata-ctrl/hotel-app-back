@@ -27,7 +27,7 @@ public class TenantRegistrationService {
         // Generate a unique tenant ID
         String uniqueTenantId = "TNT_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        // CRITICAL FIX: Bind the new tenant ID to the thread context BEFORE saving any entities
+        // 🔥 CRITICAL FIX: Bind the new tenant ID to the thread context BEFORE saving any entities
         TenantContext.setCurrentTenant(uniqueTenantId);
 
         try {
@@ -46,6 +46,7 @@ public class TenantRegistrationService {
             // =========================================================
             User manager = new User();
             manager.setId("USR-MGMT-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+            manager.setTenantId(uniqueTenantId);
             manager.setUsername(dto.getUsername());
             manager.setRole(User.Role.OWNER);
             manager.setPassword(passwordEncoder.encode(dto.getPassword()));
@@ -56,6 +57,7 @@ public class TenantRegistrationService {
             // =========================================================
             User cashier = new User();
             cashier.setId("USR-CASH-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+            cashier.setTenantId(uniqueTenantId);
             cashier.setUsername(dto.getFullName() + "_Cashier");
             cashier.setRole(User.Role.CASHIER);
 
@@ -68,7 +70,7 @@ public class TenantRegistrationService {
 
             return uniqueTenantId;
         } finally {
-            // CRITICAL FIX: Clear the context after the transaction is complete
+            // 🔥 CRITICAL FIX: Clear the context after the transaction is complete
             TenantContext.clear();
         }
     }

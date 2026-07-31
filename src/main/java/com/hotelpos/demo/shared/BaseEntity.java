@@ -22,7 +22,7 @@ public abstract class BaseEntity {
     public void onPrePersist() {
         String currentTenant = TenantContext.getCurrentTenant();
         if (currentTenant == null || currentTenant.trim().isEmpty()) {
-            // CRITICAL FIX: Throw exception instead of saving to "DEFAULT_TENANT_DEV"
+            // 🔥 CRITICAL FIX: Throw exception instead of saving to "DEFAULT_TENANT_DEV"
             throw new IllegalStateException("Cannot persist entity without a valid tenant context.");
         }
         this.tenantId = currentTenant;
