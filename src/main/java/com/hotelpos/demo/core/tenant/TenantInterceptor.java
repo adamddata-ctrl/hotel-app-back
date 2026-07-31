@@ -13,11 +13,17 @@ public class TenantInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String uri = request.getRequestURI();
+        String tenantId = request.getHeader(TENANT_HEADER_NAME);
 
         // 1. Bypass auth endpoints (no tenant required)
         if (uri.equals("/api/auth/register-tenant") ||
                 uri.equals("/api/auth/cashier-login") ||
                 uri.equals("/error")) {
+
+            // 🔥 CRITICAL FIX: Even for login, if the header is present, we MUST set the context!
+            if (tenantId != null && !tenantId.trim().isEmpty()) {
+                TenantContext.setCurrentTenant(tenantId);
+            }
             return true;
         }
 
@@ -27,9 +33,8 @@ public class TenantInterceptor implements HandlerInterceptor {
         }
 
         // 3. Validate tenant header for all other endpoints
-        String tenantId = request.getHeader(TENANT_HEADER_NAME);
         if (tenantId != null && !tenantId.trim().isEmpty()) {
-            TenantContext.setCurrentTenant(tenantId); // ✅ UNCOMMENT THIS
+            TenantContext.setCurrentTenant(tenantId);
             return true;
         } else {
             // Reject with 400 Bad Request
