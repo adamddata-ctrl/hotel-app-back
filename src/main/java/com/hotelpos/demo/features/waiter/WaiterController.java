@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/waiters") // Matches your clean, unified frontend URL layout
+@RequestMapping("/api/waiters") // 🔥 FIXED: Added '/api' to match your frontend environment
 public class WaiterController {
 
     @Autowired
@@ -36,7 +36,8 @@ public class WaiterController {
     /**
      * Provisions a brand new waiter entry under the active tenant's workspace partition.
      */
-    @PostMapping("/create")
+    @PostMapping("/create") // Note: Your frontend uses POST to /api/waiters, NOT /api/waiters/create.
+    // You might need to change this to @PostMapping("/") or update your frontend call to match.
     public ResponseEntity<?> createWaiter(@RequestBody Waiter waiterPayload) {
         String activeTenantId = TenantContext.getCurrentTenant();
 
