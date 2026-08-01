@@ -52,7 +52,7 @@ public class MenuController {
 
             return ResponseEntity.ok(successResponse);
 
-        } catch (Exception ex) {
+         } catch (Exception ex) {
             return ResponseEntity.status(500).body(Map.of(
                     "error", "Inventory registry transaction isolation mapping failure.",
                     "details", ex.getMessage()
