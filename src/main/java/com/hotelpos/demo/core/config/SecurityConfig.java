@@ -27,7 +27,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                // 1. Hook your customized CORS settings
+                // 1. Hook your customized CORS settings richard
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // 2. Deactivate CSRF for REST APIs
