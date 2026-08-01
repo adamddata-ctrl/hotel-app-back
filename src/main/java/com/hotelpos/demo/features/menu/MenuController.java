@@ -17,20 +17,10 @@ public class MenuController {
 
     /**
      * Pulls the full localized food and beverage product array matrix.
-     * 🔥 FIXED: Split into two explicit mappings to resolve path ambiguity.
+     * 🔥 ULTIMATE FIX: Handles `/api/menu-items`, `/api/menu-items/`, AND `/api/menu-items/active`!
      */
-    @GetMapping("/")
+    @GetMapping({"", "/", "/active"})
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
-        String activeTenantId = TenantContext.getCurrentTenant();
-        List<MenuItem> catalog = menuItemRepository.findByTenantId(activeTenantId);
-        return ResponseEntity.ok(catalog);
-    }
-
-    /**
-     * Handles the /active endpoint specifically, if your frontend calls it.
-     */
-    @GetMapping("/active")
-    public ResponseEntity<List<MenuItem>> getActiveMenuCatalog() {
         String activeTenantId = TenantContext.getCurrentTenant();
         List<MenuItem> catalog = menuItemRepository.findByTenantId(activeTenantId);
         return ResponseEntity.ok(catalog);
