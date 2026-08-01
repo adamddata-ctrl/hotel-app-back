@@ -17,10 +17,20 @@ public class MenuController {
 
     /**
      * Pulls the full localized food and beverage product array matrix.
-     * 🔥 FIXED: Now handles BOTH /api/menu-items AND /api/menu-items/active requests.
+     * 🔥 FIXED: Split into two explicit mappings to resolve path ambiguity.
      */
-    @GetMapping({"/", "/active"})
+    @GetMapping("/")
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
+        String activeTenantId = TenantContext.getCurrentTenant();
+        List<MenuItem> catalog = menuItemRepository.findByTenantId(activeTenantId);
+        return ResponseEntity.ok(catalog);
+    }
+
+    /**
+     * Handles the /active endpoint specifically, if your frontend calls it.
+     */
+    @GetMapping("/active")
+    public ResponseEntity<List<MenuItem>> getActiveMenuCatalog() {
         String activeTenantId = TenantContext.getCurrentTenant();
         List<MenuItem> catalog = menuItemRepository.findByTenantId(activeTenantId);
         return ResponseEntity.ok(catalog);
@@ -52,7 +62,7 @@ public class MenuController {
 
             return ResponseEntity.ok(successResponse);
 
-         } catch (Exception ex) {
+        } catch (Exception ex) {
             return ResponseEntity.status(500).body(Map.of(
                     "error", "Inventory registry transaction isolation mapping failure.",
                     "details", ex.getMessage()
