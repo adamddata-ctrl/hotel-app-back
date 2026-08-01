@@ -116,6 +116,7 @@ public class AuthController {
     public ResponseEntity<?> cashierLogout(@RequestBody Map<String, Object> payload) {
         Object cashierId = payload.get("cashierId");
 
+
         System.out.println("SHIFT LOG ENGINE: Processing shift log finalization tracking for ID: " + cashierId);
 
         Map<String, Object> response = new HashMap<>();
