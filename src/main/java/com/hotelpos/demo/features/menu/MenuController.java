@@ -17,7 +17,7 @@ public class MenuController {
 
     /**
      * Pulls the full localized food and beverage product array matrix.
-     * 🔥 ULTIMATE FIX: Handles `/api/menu-items`, `/api/menu-items/`, AND `/api/menu-items/active`!
+     * Handles `/api/menu-items`, `/api/menu-items/`, AND `/api/menu-items/active`!
      */
     @GetMapping({"", "/", "/active"})
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
@@ -28,8 +28,9 @@ public class MenuController {
 
     /**
      * Registers a new custom product menu option into the database.
+     * 🔥 FIXED: Changed @PostMapping to @PostMapping("/create") to match your frontend endpoint!
      */
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<?> addMenuItemToCatalog(@RequestBody MenuItem newItem) {
 
         if (newItem.getItemName() == null || newItem.getItemName().trim().isEmpty()) {
