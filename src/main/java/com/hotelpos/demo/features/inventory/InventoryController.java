@@ -1,6 +1,8 @@
 package com.hotelpos.demo.features.inventory;
 
 import com.hotelpos.demo.core.tenant.TenantContext;
+import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/inventory") // 🔥 FIXED: Added "/api" prefix to match your frontend environment.ts
+@RequestMapping("/api/inventory")
 public class InventoryController {
 
     @Autowired
@@ -18,13 +20,26 @@ public class InventoryController {
     @Autowired
     private InventoryItemRepository inventoryItemRepository;
 
+    @Autowired
+    private EntityManager entityManager; // 🔥 ADDED: Needed to enable the Hibernate filter
+
     /**
-     * Fetches all inventory items for the active tenant context workspace.
+     * Fetches all inventory items strictly filtered by the active tenant context workspace.
      */
     @GetMapping("/items/all")
     public ResponseEntity<List<InventoryItem>> fetchAllInventoryItems() {
-        // Your TenantInterceptor filters this repository call by tenant automatically!
-        return ResponseEntity.ok(inventoryItemRepository.findAll());
+        String activeTenantId = TenantContext.getCurrentTenant();
+
+        // 🔥 CRITICAL FIX: Enable the tenant filter manually before querying!
+        Session session = entityManager.unwrap(Session.class);
+        session.enableFilter("tenantFilter").setParameter("tenantId", activeTenantId);
+
+        List<InventoryItem> items = inventoryItemRepository.findAll();
+
+        // 🔥 Disable the filter after the query so it doesn't interfere with other operations
+        session.disableFilter("tenantFilter");
+
+        return ResponseEntity.ok(items);
     }
 
     /**
@@ -65,8 +80,6 @@ public class InventoryController {
     @PostMapping("/items/create")
     public ResponseEntity<?> createNewInventoryItem(@RequestBody InventoryItem newItem) {
         try {
-            // Your TenantInterceptor binds the active tenant_id to the TenantContext automatically.
-            // Because InventoryItem extends BaseEntity, @PrePersist will pull it and assign it correctly!
             InventoryItem saved = inventoryItemRepository.save(newItem);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
@@ -79,7 +92,6 @@ public class InventoryController {
      */
     @GetMapping("/shift/summary/{cashierId}")
     public ResponseEntity<?> fetchActiveShiftInflows(@PathVariable("cashierId") String cashierId) {
-        // SECURE FAIL CLOSED: Intercept requests to ensure a valid tenant context is bound to the thread
         String activeTenantId = TenantContext.getCurrentTenant();
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
