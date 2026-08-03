@@ -1,3 +1,4 @@
+
 package com.hotelpos.demo.features.checkout;
 
 import com.hotelpos.demo.core.tenant.TenantContext;
@@ -14,7 +15,7 @@ import java.time.LocalTime;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/checkout") // ✅ FIXED: Added "/api" prefix to match frontend environment.apiUrl
+@RequestMapping("/api/checkout")
 public class CheckoutController {
 
     @Autowired
@@ -26,21 +27,15 @@ public class CheckoutController {
     @Autowired
     private InventoryService inventoryService;
 
-    /**
-     * Receives order ticket streams from your Angular touchscreen terminal.
-     * Deducts inventory automatically and archives the transaction.
-     */
     @PostMapping("/order")
     @Transactional
     public ResponseEntity<?> checkoutOrder(@RequestBody OrderCreateRequest request) {
 
-        // 1. Validate request payload
         if (request.getItems() == null || request.getItems().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Cannot checkout an empty order."));
         }
 
-        // 2. Extract active multi-tenant ID from thread-safe context
         String activeTenantId = TenantContext.getCurrentTenant();
         if (activeTenantId == null || activeTenantId.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -48,14 +43,12 @@ public class CheckoutController {
         }
 
         try {
-            // 3. Build the master Order entity
             Order order = new Order();
             order.setTenantId(activeTenantId);
             order.setCashierId(request.getCashierId());
             order.setWaiterId(request.getWaiterId());
             order.setTotalAmount(request.getTotalAmount());
 
-            // 4. Build child OrderItem entities and bind them to the order
             List<OrderItem> orderItems = new ArrayList<>();
             for (OrderItemRequest itemReq : request.getItems()) {
                 OrderItem detail = new OrderItem();
@@ -67,19 +60,17 @@ public class CheckoutController {
             }
             order.setItems(orderItems);
 
-            // 5. Persist the entire order graph
             Order savedOrder = orderRepository.save(order);
 
-            // 6. Deduct stock for each ordered item
             if (savedOrder.getItems() != null) {
                 for (OrderItem item : savedOrder.getItems()) {
-                    menuItemRepository.findById(item.getItemId()).ifPresent(menuItem ->
+                    // 🔥 FIXED: Added .longValue() here!
+                    menuItemRepository.findById(item.getItemId().longValue()).ifPresent(menuItem ->
                             inventoryService.deductStockForOrder(menuItem, item.getQuantity())
                     );
                 }
             }
 
-            // 7. Return success response
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("orderId", savedOrder.getId());
@@ -95,10 +86,6 @@ public class CheckoutController {
         }
     }
 
-    /**
-     * Streams all active (unfulfilled) kitchen tickets for the current tenant.
-     * Used by the Kitchen Screen component.
-     */
     @GetMapping("/orders/open")
     public ResponseEntity<?> getOpenKitchenOrders() {
         String activeTenantId = TenantContext.getCurrentTenant();
@@ -118,7 +105,6 @@ public class CheckoutController {
                 ticket.put("id", order.getId());
                 ticket.put("waiterName", "Server #" + order.getWaiterId());
 
-                // ✅ FIXED: Null-safe time extraction
                 if (order.getCreatedAt() != null) {
                     ticket.put("orderTime", order.getCreatedAt().toLocalTime());
                 } else {
@@ -129,7 +115,8 @@ public class CheckoutController {
                 for (OrderItem item : order.getItems()) {
                     Map<String, Object> itemData = new HashMap<>();
 
-                    String actualItemName = menuItemRepository.findById(item.getItemId())
+                    // 🔥 FIXED: Added .longValue() here too!
+                    String actualItemName = menuItemRepository.findById(item.getItemId().longValue())
                             .map(MenuItem::getItemName)
                             .orElse("Unknown Product");
 
@@ -150,10 +137,6 @@ public class CheckoutController {
         }
     }
 
-    /**
-     * Marks a kitchen ticket as fulfilled and removes it from the active queue.
-     * Includes a cryptographic tenant-boundary check to prevent cross-tenant deletion.
-     */
     @PostMapping("/orders/fulfill/{id}")
     @Transactional
     public ResponseEntity<?> fulfillKitchenOrderTicket(@PathVariable("id") Integer id) {
@@ -173,13 +156,11 @@ public class CheckoutController {
 
         Order order = orderOptional.get();
 
-        // ✅ Security boundary check: Prevent cross-tenant manipulation
         if (!order.getTenantId().equals(activeTenantId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Access Denied: Ticket belongs to another tenant."));
         }
 
-        // Delete the ticket from the active queue
         orderRepository.delete(order);
 
         Map<String, Object> response = new HashMap<>();
