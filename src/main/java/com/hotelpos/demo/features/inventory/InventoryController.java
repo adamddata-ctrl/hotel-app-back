@@ -107,6 +107,7 @@ public class InventoryController {
         }
     }
 
+
     /**
      * Processes goods receiving tasks from supplier purchase order tickets.
      */
