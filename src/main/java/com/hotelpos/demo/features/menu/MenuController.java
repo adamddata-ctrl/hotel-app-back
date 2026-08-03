@@ -1,13 +1,14 @@
 package com.hotelpos.demo.features.menu;
 
 import com.hotelpos.demo.core.tenant.TenantContext;
-import com.hotelpos.demo.features.inventory.InventoryItemRepository;
+import com.hotelpos.demo.features.inventory.RecipeIngredient;
+import com.hotelpos.demo.features.inventory.RecipeIngredientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/menu-items")
@@ -17,11 +18,10 @@ public class MenuController {
     private MenuItemRepository menuItemRepository;
 
     @Autowired
-    private InventoryItemRepository inventoryItemRepository;
+    private RecipeIngredientRepository recipeIngredientRepository;
 
     /**
      * Pulls the full localized food and beverage product array matrix.
-     * Handles `/api/menu-items`, `/api/menu-items/`, AND `/api/menu-items/active`!
      */
     @GetMapping({"", "/", "/active"})
     public ResponseEntity<List<MenuItem>> getTenantMenuCatalog() {
@@ -65,21 +65,19 @@ public class MenuController {
     }
 
     /**
-     * 🔥 DELETES MENU ITEM: Clears the menu_item_id link in inventory before deleting the item!
-     * No more type mismatch errors because everything now uses Long!
+     * 🔥 UPDATED DELETE METHOD: Removes recipe links BEFORE deleting the menu item.
      */
     @DeleteMapping("/delete/{itemId}")
     public ResponseEntity<?> deleteMenuItem(@PathVariable Long itemId) {
         try {
-            // 1. Find the inventory item linked to this menu item
-            inventoryItemRepository.findByMenuItemId(itemId).ifPresent(inventoryItem -> {
-                // 2. Clear the link so MySQL allows the deletion
-                inventoryItem.setMenuItemId(null);
-                inventoryItemRepository.save(inventoryItem);
-                System.out.println("INVENTORY ENGINE: Unlinked inventory item " + inventoryItem.getItemName() + " from menu item " + itemId);
-            });
+            // 1. Delete all RecipeIngredient records associated with this menu item first
+            List<RecipeIngredient> recipeLinks = recipeIngredientRepository.findByMenuItemId(itemId);
+            if (!recipeLinks.isEmpty()) {
+                recipeIngredientRepository.deleteAll(recipeLinks);
+                System.out.println("RECIPE ENGINE: Deleted " + recipeLinks.size() + " recipe links for menu item " + itemId);
+            }
 
-            // 3. Now safely delete the menu item (deleteById now accepts Long perfectly!)
+            // 2. Now safely delete the menu item
             menuItemRepository.deleteById(itemId);
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Menu item deleted successfully."));
