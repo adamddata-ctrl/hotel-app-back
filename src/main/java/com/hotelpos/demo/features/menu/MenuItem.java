@@ -26,7 +26,7 @@ public class MenuItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id; // Auto-incrementing relational key
+    private long id; // Auto-incrementing relational key
 
     @Column(name = "item_name", nullable = false, length = 100)
     private String itemName; // Operational name of food/drink (e.g., "Fried Chicken")

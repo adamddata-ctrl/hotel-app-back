@@ -5,7 +5,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface MenuItemRepository extends JpaRepository<MenuItem, Integer> {
+public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
     // 🔥 ADD THIS LINE: Used by the Angular terminal on boot to pull the whole catalog
     List<MenuItem> findByTenantId(String tenantId);

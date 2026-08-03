@@ -1,6 +1,7 @@
 package com.hotelpos.demo.features.menu;
 
 import com.hotelpos.demo.core.tenant.TenantContext;
+import com.hotelpos.demo.features.inventory.InventoryItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,9 @@ public class MenuController {
     @Autowired
     private MenuItemRepository menuItemRepository;
 
+    @Autowired
+    private InventoryItemRepository inventoryItemRepository;
+
     /**
      * Pulls the full localized food and beverage product array matrix.
      * Handles `/api/menu-items`, `/api/menu-items/`, AND `/api/menu-items/active`!
@@ -28,7 +32,6 @@ public class MenuController {
 
     /**
      * Registers a new custom product menu option into the database.
-     * 🔥 FIXED: Changed @PostMapping to @PostMapping("/create") to match your frontend endpoint!
      */
     @PostMapping("/create")
     public ResponseEntity<?> addMenuItemToCatalog(@RequestBody MenuItem newItem) {
@@ -58,6 +61,30 @@ public class MenuController {
                     "error", "Inventory registry transaction isolation mapping failure.",
                     "details", ex.getMessage()
             ));
+        }
+    }
+
+    /**
+     * 🔥 DELETES MENU ITEM: Clears the menu_item_id link in inventory before deleting the item!
+     * No more type mismatch errors because everything now uses Long!
+     */
+    @DeleteMapping("/delete/{itemId}")
+    public ResponseEntity<?> deleteMenuItem(@PathVariable Long itemId) {
+        try {
+            // 1. Find the inventory item linked to this menu item
+            inventoryItemRepository.findByMenuItemId(itemId).ifPresent(inventoryItem -> {
+                // 2. Clear the link so MySQL allows the deletion
+                inventoryItem.setMenuItemId(null);
+                inventoryItemRepository.save(inventoryItem);
+                System.out.println("INVENTORY ENGINE: Unlinked inventory item " + inventoryItem.getItemName() + " from menu item " + itemId);
+            });
+
+            // 3. Now safely delete the menu item (deleteById now accepts Long perfectly!)
+            menuItemRepository.deleteById(itemId);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Menu item deleted successfully."));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete menu item: " + e.getMessage()));
         }
     }
 }
