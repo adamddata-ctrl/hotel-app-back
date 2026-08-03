@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-
 @RestController
 @RequestMapping("/api/inventory")
 public class InventoryController {
@@ -107,7 +106,6 @@ public class InventoryController {
         }
     }
 
-
     /**
      * Processes goods receiving tasks from supplier purchase order tickets.
      */
@@ -125,10 +123,7 @@ public class InventoryController {
     }
 }
 
-
-
-
-/**adam
+/**
  * Unified Request Data Transfer Object container layer
  */
 @lombok.Data
