@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class InventoryService {
@@ -13,32 +12,35 @@ public class InventoryService {
     @Autowired
     private InventoryItemRepository inventoryItemRepository;
 
-    // =========================================================================
-    // 🔥 NEW SIMPLIFIED DEDUCTION LOGIC: Directly finds the inventory linked by menu_item_id
-    // =========================================================================
+    @Autowired
+    private RecipeIngredientRepository recipeIngredientRepository;
+
     @Transactional
     public void deductStockForOrder(MenuItem menuItem, int orderQuantity) {
         if (menuItem == null) return;
 
-        // Look for the Inventory Item linked to this Menu Item ID
-        Optional<InventoryItem> optionalItem = inventoryItemRepository.findByMenuItemId(menuItem.getId());
+        List<RecipeIngredient> recipeList = recipeIngredientRepository.findByMenuItemId(menuItem.getId());
 
-        if (optionalItem.isPresent()) {
-            InventoryItem ingredient = optionalItem.get();
-            double newStock = ingredient.getQuantityOnHand() - orderQuantity;
+        if (recipeList.isEmpty()) {
+            System.out.println("INVENTORY ENGINE: No recipe ingredients found for menu item " + menuItem.getId());
+            return;
+        }
 
-            // Prevent negative stock
-            if (newStock < 0) newStock = 0;
+        for (RecipeIngredient recipe : recipeList) {
+            InventoryItem ingredient = recipe.getInventoryItem();
+            if (ingredient != null) {
+                double totalDeduction = recipe.getQuantityRequired() * orderQuantity;
+                double newStock = ingredient.getQuantityOnHand() - totalDeduction;
 
-            ingredient.setQuantityOnHand(newStock);
-            inventoryItemRepository.save(ingredient);
-            System.out.println("INVENTORY ENGINE: Deducted " + orderQuantity + " from " + ingredient.getItemName());
-        } else {
-            System.out.println("INVENTORY ENGINE: No inventory item linked to menu item ID " + menuItem.getId());
+                if (newStock < 0) newStock = 0;
+
+                ingredient.setQuantityOnHand(newStock);
+                inventoryItemRepository.save(ingredient);
+                System.out.println("INVENTORY ENGINE: Deducted " + totalDeduction + " from " + ingredient.getItemName());
+            }
         }
     }
 
-    // --- Your existing methods for adjustments, counts, and purchase orders ---
     @Transactional
     public InventoryItem executeStockAdjustment(Long itemId, double quantityChange) {
         InventoryItem item = inventoryItemRepository.findById(itemId)

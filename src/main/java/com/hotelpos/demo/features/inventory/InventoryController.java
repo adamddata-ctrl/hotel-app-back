@@ -1,12 +1,15 @@
 package com.hotelpos.demo.features.inventory;
 
 import com.hotelpos.demo.core.tenant.TenantContext;
+import com.hotelpos.demo.features.menu.MenuItem;
+import com.hotelpos.demo.features.menu.MenuItemRepository;
 import jakarta.persistence.EntityManager;
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +24,12 @@ public class InventoryController {
     private InventoryItemRepository inventoryItemRepository;
 
     @Autowired
-    private EntityManager entityManager; // 🔥 ADDED: Needed to enable the Hibernate filter
+    private RecipeIngredientRepository recipeIngredientRepository;
+    @Autowired
+    private MenuItemRepository menuItemRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     /**
      * Fetches all inventory items strictly filtered by the active tenant context workspace.
@@ -30,13 +38,11 @@ public class InventoryController {
     public ResponseEntity<List<InventoryItem>> fetchAllInventoryItems() {
         String activeTenantId = TenantContext.getCurrentTenant();
 
-        // 🔥 CRITICAL FIX: Enable the tenant filter manually before querying!
         Session session = entityManager.unwrap(Session.class);
         session.enableFilter("tenantFilter").setParameter("tenantId", activeTenantId);
 
         List<InventoryItem> items = inventoryItemRepository.findAll();
 
-        // 🔥 Disable the filter after the query so it doesn't interfere with other operations
         session.disableFilter("tenantFilter");
 
         return ResponseEntity.ok(items);
@@ -76,14 +82,39 @@ public class InventoryController {
 
     /**
      * Registers a brand-new raw ingredient item directly into the database.
+     * Handles multi-selected menu IDs and creates recipe links automatically.
      */
     @PostMapping("/items/create")
-    public ResponseEntity<?> createNewInventoryItem(@RequestBody InventoryItem newItem) {
+    public ResponseEntity<?> createNewInventoryItem(@RequestBody Map<String, Object> payload) {
         try {
-            InventoryItem saved = inventoryItemRepository.save(newItem);
-            return ResponseEntity.ok(saved);
+            String itemName = (String) payload.get("itemName");
+            double quantityOnHand = Double.parseDouble(payload.get("quantityOnHand").toString());
+            double minStockLevel = Double.parseDouble(payload.get("minStockLevel").toString());
+            String unitOfMeasure = (String) payload.get("unitOfMeasure");
+            String category = (String) payload.get("category");
+
+            List<Integer> linkedMenuIds = (List<Integer>) payload.get("linkedMenuIds");
+            if (linkedMenuIds == null) {
+                linkedMenuIds = new ArrayList<>();
+            }
+
+            InventoryItem newItem = new InventoryItem(itemName, quantityOnHand, minStockLevel, unitOfMeasure, category);
+            InventoryItem savedItem = inventoryItemRepository.save(newItem);
+
+            for (Integer menuId : linkedMenuIds) {
+                menuItemRepository.findById(menuId.longValue()).ifPresent(menuItem -> {
+                    RecipeIngredient recipe = new RecipeIngredient();
+                    recipe.setMenuItem(menuItem);
+                    recipe.setInventoryItem(savedItem);
+                    recipe.setQuantityRequired(1.0);
+                    recipeIngredientRepository.save(recipe);
+                });
+            }
+
+            return ResponseEntity.ok(savedItem);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Failed to create item: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -102,7 +133,10 @@ public class InventoryController {
             var shiftReport = inventoryService.generateShiftReportData(cashierId);
             return ResponseEntity.ok(shiftReport);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            // 🔥 FIXED: This returns a JSON error object instead of a raw null-unsafe string, clearing the red squiggle!
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage() != null ? e.getMessage() : "An unknown error occurred while fetching shift report."
+            ));
         }
     }
 

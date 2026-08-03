@@ -30,19 +30,13 @@ public class InventoryItem extends BaseEntity {
     @Column(nullable = false)
     private String category;
 
-    // 🔥 CRITICAL NEW FIELD: Links this inventory item directly to a Menu Item ID!
-    @Column(name = "menu_item_id")
-    private Long menuItemId;
-
-    // --- Constructors ---
     public InventoryItem() {}
 
-    public InventoryItem(String itemName, double quantityOnHand, double minStockLevel, String unitOfMeasure, String category, Long menuItemId) {
+    public InventoryItem(String itemName, double quantityOnHand, double minStockLevel, String unitOfMeasure, String category) {
         this.itemName = itemName;
         this.quantityOnHand = quantityOnHand;
         this.minStockLevel = minStockLevel;
         this.unitOfMeasure = unitOfMeasure;
         this.category = category;
-        this.menuItemId = menuItemId;
     }
 }

@@ -7,6 +7,6 @@ import java.util.List;
 @Repository
 public interface RecipeIngredientRepository extends JpaRepository<RecipeIngredient, Long> {
 
-    // Finds all ingredients mapped to a specific menu item ID (useful for Option B calculations)
-    List<RecipeIngredient> findByMenuItemId(Integer menuItemId);
+    // 🔥 FIXED: Changed parameter from Integer to Long to match your MenuItem ID type
+    List<RecipeIngredient> findByMenuItemId(Long menuItemId);
 }
