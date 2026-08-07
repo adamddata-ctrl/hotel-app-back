@@ -14,7 +14,7 @@ public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    /**
+    /**richp
      * Connects this individual line back up to its primary parent header record.
      */
     @ManyToOne(fetch = FetchType.LAZY)

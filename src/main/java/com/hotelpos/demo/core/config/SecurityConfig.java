@@ -24,11 +24,13 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                // 1. Hook your customized CORS settings richard
+                // 1. Hook your customized CORS settings richard sisay
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
 
                 // 2. Deactivate CSRF for REST APIs
                 .csrf(csrf -> csrf.disable())
